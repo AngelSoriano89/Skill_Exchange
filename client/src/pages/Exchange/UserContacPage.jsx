@@ -41,16 +41,16 @@ const UserContactPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <div className="text-xl text-gray-600">Cargando detalles del intercambio...</div>
+      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+        <div className="fs-5 text-secondary">Cargando detalles del intercambio...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">{error}</div>
+      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+        <div className="alert alert-danger shadow-sm" role="alert">{error}</div>
       </div>
     );
   }
@@ -58,37 +58,38 @@ const UserContactPage = () => {
   const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 sm:p-12 text-center max-w-xl w-full">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">¡Intercambio Aceptado!</h1>
-        <p className="text-lg text-gray-600 mb-6">
-          Ahora puedes contactar a <span className="font-semibold">{otherUser.name}</span> para coordinar.
-        </p>
+    <div className="d-flex flex-column justify-content-center align-items-center min-vh-100 bg-light p-3">
+      <div className="card shadow-lg p-4 p-sm-5 text-center w-100" style={{ maxWidth: '600px' }}>
+        <div className="card-body">
+          <h1 className="h3 fw-bold text-dark mb-3">¡Intercambio Aceptado!</h1>
+          <p className="lead text-secondary mb-4">
+            Ahora puedes contactar a <span className="fw-semibold">{otherUser.name}</span> para coordinar.
+          </p>
 
-        <div className="bg-gray-200 p-6 rounded-lg mb-6">
-          <h2 className="text-xl font-bold text-gray-700 mb-4">Información de Contacto</h2>
-          <div className="flex flex-col items-center space-y-4">
-            <p className="text-gray-800 flex items-center">
-              <FaEnvelope className="mr-2 text-blue-500" />
-              <span className="font-semibold">Correo:</span> {otherUser.email}
-            </p>
-            {/* Si el perfil tuviera un teléfono, se mostraría aquí */}
-            {otherUser.phone && (
-              <p className="text-gray-800 flex items-center">
-                <FaPhone className="mr-2 text-green-500" />
-                <span className="font-semibold">Teléfono:</span> {otherUser.phone}
+          <div className="bg-light p-4 rounded-3 mb-4">
+            <h2 className="h5 fw-bold text-dark mb-3">Información de Contacto</h2>
+            <div className="d-flex flex-column align-items-center gap-2">
+              <p className="text-dark d-flex align-items-center mb-0">
+                <FaEnvelope className="me-2 text-primary" />
+                <span className="fw-semibold">Correo:</span> {otherUser.email}
               </p>
-            )}
+              {otherUser.phone && (
+                <p className="text-dark d-flex align-items-center mb-0">
+                  <FaPhone className="me-2 text-success" />
+                  <span className="fw-semibold">Teléfono:</span> {otherUser.phone}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
 
-        <button
-          onClick={handleCompleteExchange}
-          className="bg-green-600 text-white font-semibold py-3 px-6 rounded-full hover:bg-green-700 transition-colors duration-200 shadow-lg"
-        >
-          <FaCheckCircle className="inline-block mr-2" />
-          Marcar Intercambio como Completado
-        </button>
+          <button
+            onClick={handleCompleteExchange}
+            className="btn btn-success fw-semibold py-3 px-4 rounded-pill shadow-sm"
+          >
+            <FaCheckCircle className="d-inline-block me-2" />
+            Marcar Intercambio como Completado
+          </button>
+        </div>
       </div>
     </div>
   );

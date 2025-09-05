@@ -6,15 +6,19 @@ const User = require('../models/User');
 exports.getUsers = async (req, res) => {
   try {
     const { search } = req.query;
-    let users = await User.find().select('-password');
-    
+    let query = {};
+
     if (search) {
       const regex = new RegExp(search, 'i');
-      users = users.filter(user => 
-        user.skills_to_offer.some(skill => skill.match(regex)) ||
-        user.skills_to_learn.some(skill => skill.match(regex))
-      );
+      query = {
+        $or: [
+          { skills_to_offer: { $in: [regex] } },
+          { skills_to_learn: { $in: [regex] } },
+        ],
+      };
     }
+    
+    const users = await User.find(query).select('-password');
     
     res.json(users);
   } catch (err) {

@@ -13,7 +13,7 @@ app.use(express.json({ extended: false }));
 app.use(cors(corsOptions));
 
 // Definir rutas
-app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'))
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/skills', require('./routes/skillRoutes'));
 app.use('/api/exchanges', require('./routes/exchangeRoutes'));

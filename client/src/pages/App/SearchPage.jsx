@@ -2,40 +2,44 @@ import React from 'react';
 
 const SearchPage = () => {
   return (
-    <div id="search-page" className="page w-full p-8">
-      <div className="container mx-auto">
-        <h1 className="text-4xl font-bold text-gray-800 mb-6 text-center">
+    <div id="search-page" className="page w-100 p-4">
+      <div className="container">
+        <h1 className="h2 fw-bold text-dark text-center mb-4">
           Encuentra tu próximo intercambio
         </h1>
-        <div className="flex justify-center mb-8">
-          <div className="relative w-full max-w-lg">
+        <div className="d-flex justify-content-center mb-4">
+          <div className="input-group" style={{ maxWidth: '600px' }}>
+            <span className="input-group-text bg-white border-end-0">&#x1f50e;&#xfe0e;</span>
             <input
               type="text"
               placeholder="Buscar por habilidad (ej. Piano, Cocina, Programación)"
-              className="w-full p-4 pl-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+              className="form-control border-start-0 py-2 rounded-pill"
             />
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">&#x1f50e;&#xfe0e;</span>
           </div>
         </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          <div className="user-card card w-full sm:w-1/2 md:w-1/3 lg:w-1/4 p-6 text-center">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">María López</h3>
-            <p className="text-sm text-gray-500 mb-4">¡Maestra de cocina!</p>
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-700 mb-1">Ofrece:</h4>
-              <div className="flex flex-wrap justify-center gap-1">
-                <span className="skill-tag">Cocina</span>
-                <span className="skill-tag">Repostería</span>
+        <div className="row g-4 justify-content-center">
+          {/* User Card */}
+          <div className="col-12 col-sm-6 col-md-4 col-lg-3">
+            <div className="card shadow-sm p-4 text-center h-100">
+              <h3 className="h5 fw-semibold text-dark mb-2">María López</h3>
+              <p className="text-muted small mb-3">¡Maestra de cocina!</p>
+              <div className="mb-3">
+                <h4 className="fw-semibold text-secondary mb-1">Ofrece:</h4>
+                <div className="d-flex flex-wrap justify-content-center gap-1">
+                  <span className="badge bg-info text-dark">Cocina</span>
+                  <span className="badge bg-info text-dark">Repostería</span>
+                </div>
               </div>
-            </div>
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-700 mb-1">Quiere Aprender:</h4>
-              <div className="flex flex-wrap justify-center gap-1">
-                <span className="skill-tag">Idiomas</span>
+              <div className="mb-3">
+                <h4 className="fw-semibold text-secondary mb-1">Quiere Aprender:</h4>
+                <div className="d-flex flex-wrap justify-content-center gap-1">
+                  <span className="badge bg-success">Idiomas</span>
+                </div>
               </div>
+              <button className="btn btn-primary rounded-pill mt-auto">Ver Perfil</button>
             </div>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-colors">Ver Perfil</button>
           </div>
+          {/* /User Card */}
         </div>
       </div>
     </div>

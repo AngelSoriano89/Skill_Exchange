@@ -5,38 +5,47 @@ const UserCard = ({ user }) => {
   const { name, email, skills_to_offer, skills_to_learn, _id } = user;
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-4xl font-bold text-gray-500 mb-4">
-        {name.charAt(0).toUpperCase()}
-      </div>
-      <h3 className="text-xl font-bold mb-1">{name}</h3>
-      <p className="text-sm text-gray-500 mb-4">{email}</p>
-      
-      <div className="w-full text-left mb-4">
-        <h4 className="font-semibold text-gray-700">Ofrece:</h4>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {skills_to_offer.map((skill, index) => (
-            <span key={index} className="skill-tag bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm">
-              {skill}
-            </span>
-          ))}
+    <div className="card text-center h-100 shadow-sm transition-shadow duration-300">
+      <div className="card-body d-flex flex-column align-items-center">
+        {/* Avatar */}
+        <div className="bg-secondary bg-opacity-25 text-dark d-flex align-items-center justify-content-center fw-bold rounded-circle" style={{ width: '96px', height: '96px', fontSize: '2.5rem' }}>
+          {name.charAt(0).toUpperCase()}
         </div>
-      </div>
-      
-      <div className="w-full text-left mb-4">
-        <h4 className="font-semibold text-gray-700">Quiere aprender:</h4>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {skills_to_learn.map((skill, index) => (
-            <span key={index} className="skill-tag bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm">
-              {skill}
-            </span>
-          ))}
+        {/* /Avatar */}
+
+        <h3 className="card-title mt-4 mb-1 fw-bold">{name}</h3>
+        <p className="card-subtitle text-muted mb-4">{email}</p>
+
+        {/* Habilidades a ofrecer */}
+        <div className="w-100 text-start mb-3">
+          <h4 className="fw-semibold text-secondary">Ofrece:</h4>
+          <div className="d-flex flex-wrap gap-2 mt-1">
+            {skills_to_offer.map((skill, index) => (
+              <span key={index} className="badge bg-primary text-wrap rounded-pill px-3 py-1 text-sm">
+                {skill}
+              </span>
+            ))}
+          </div>
         </div>
+        {/* /Habilidades a ofrecer */}
+
+        {/* Habilidades a aprender */}
+        <div className="w-100 text-start mb-3">
+          <h4 className="fw-semibold text-secondary">Quiere aprender:</h4>
+          <div className="d-flex flex-wrap gap-2 mt-1">
+            {skills_to_learn.map((skill, index) => (
+              <span key={index} className="badge bg-success text-wrap rounded-pill px-3 py-1 text-sm">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+        {/* /Habilidades a aprender */}
+
+        <Link to={`/profile/${_id}`} className="btn btn-primary fw-semibold rounded-pill w-100 mt-auto shadow">
+          Ver Perfil
+        </Link>
       </div>
-      
-      <Link to={`/profile/${_id}`} className="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-full hover:bg-indigo-700 transition-colors duration-200 shadow-lg w-full">
-        Ver Perfil
-      </Link>
     </div>
   );
 };

@@ -22,9 +22,9 @@ exports.register = async (req, res) => {
       skills_to_learn,
       bio,
     });
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
+    
+    // **Ajuste aquí:** Ya no se encripta la contraseña manualmente.
+    // Esto se maneja automáticamente en el modelo de usuario.
     await user.save();
 
     const payload = {

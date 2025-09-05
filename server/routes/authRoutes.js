@@ -3,12 +3,12 @@ const router = express.Router();
 const { register, login } = require('../controllers/authController');
 
 // @route   POST api/auth/register
-// @desc    Registrar un nuevo usuario
+// @desc    Register a new user
 // @access  Public
 router.post('/register', register);
 
 // @route   POST api/auth/login
-// @desc    Autenticar usuario y obtener token
+// @desc    Authenticate user and get token
 // @access  Public
 router.post('/login', login);
 
