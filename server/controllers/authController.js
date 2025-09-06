@@ -85,3 +85,22 @@ exports.login = async (req, res) => {
     res.status(500).send('Error del servidor');
   }
 };
+
+// ... (código existente para register y login)
+
+// @route   GET api/auth/me
+// @desc    Obtener el perfil del usuario autenticado
+// @access  Private
+exports.getLoggedInUser = async (req, res) => {
+  try {
+    // Buscar al usuario por el ID proporcionado por el middleware
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
+    res.json({ user });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};

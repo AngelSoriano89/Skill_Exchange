@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { BrowserRouter } from 'react-router-dom';
+// Remueve la importación de BrowserRouter, ya que debe estar en App.js
 
 const Header = () => {
   const { user, logout } = useContext(AuthContext);
@@ -16,7 +16,8 @@ const Header = () => {
     <header className="bg-white shadow-sm py-3">
       <nav className="navbar navbar-expand-lg navbar-light">
         <div className="container-fluid">
-          <Link to="/dashboard" className="navbar-brand fs-4 fw-bold text-dark">
+          {/* Enlace al dashboard si el usuario está logueado, sino a la landing */}
+          <Link to={user ? "/dashboard" : "/"} className="navbar-brand fs-4 fw-bold text-dark">
             Skill Exchange
           </Link>
           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +38,7 @@ const Header = () => {
                     </Link>
                   </li>
                   <li className="nav-item">
-                    <Link to={`/profile/${user.uid}`} className="nav-link text-secondary">
+                    <Link to={`/profile/${user.id}`} className="nav-link text-secondary">
                       Perfil
                     </Link>
                   </li>

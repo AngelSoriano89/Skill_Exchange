@@ -1,52 +1,91 @@
 import React from 'react';
+import { FaUserCircle, FaEdit, FaPlus, FaLaptopCode, FaBookReader } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
+
+  // Datos de ejemplo para el perfil
+  const userProfile = {
+    name: 'Alex Sánchez',
+    bio: 'Me encanta la programación y el diseño. Busco aprender a tocar la guitarra.',
+    skillsToOffer: ['JavaScript', 'Node.js', 'MongoDB'],
+    skillsToLearn: ['Guitarra', 'Fotografía'],
+  };
+
+  const handleEditProfile = () => {
+    navigate('/profile/edit');
+  };
+
+  const handleAddSkill = () => {
+    navigate('/skills/add');
+  };
+
   return (
-    <div id="profile-page" className="page w-100 p-4">
-      <div className="container py-4">
-        <div className="card shadow-sm p-4">
-          {/* Profile Header Section */}
-          <div className="d-flex flex-column flex-sm-row align-items-center align-items-sm-start mb-4">
-            <div className="profile-avatar bg-light rounded-circle me-sm-4 mb-3 mb-sm-0 d-flex justify-content-center align-items-center" style={{ width: '120px', height: '120px' }}>
-              {/* Optional: Add user's initial or profile picture */}
-            </div>
-            <div className="text-center text-sm-start">
-              <h1 className="h2 fw-bold text-dark mb-1">Alex Sánchez</h1>
-              <p className="lead text-muted mb-3">Me encanta la programación y el diseño. Busco aprender a tocar la guitarra.</p>
-              <div className="d-flex flex-wrap justify-content-center justify-content-sm-start gap-2">
-                <button className="btn btn-outline-secondary rounded-pill px-4 py-2">
-                  <span className="me-1">&#9999;</span> Editar Perfil
-                </button>
-                <button className="btn btn-primary rounded-pill px-4 py-2">
-                  <span className="me-1">&#x2b;</span> Añadir Habilidad
-                </button>
+    <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
+      <div className="container py-5">
+        <div className="card shadow-lg border-0 rounded-4">
+          <div className="card-body p-4 p-md-5">
+            {/* Encabezado del Perfil */}
+            <div className="d-flex flex-column flex-sm-row align-items-center align-items-sm-start mb-4">
+              <div 
+                className="bg-light rounded-circle me-sm-4 mb-3 mb-sm-0 d-flex justify-content-center align-items-center"
+                style={{ width: '120px', height: '120px', border: '3px solid #0d6efd' }}
+              >
+                <FaUserCircle size={100} className="text-muted" />
+              </div>
+              <div className="text-center text-sm-start">
+                <h1 className="h2 fw-bold text-dark mb-1">{userProfile.name}</h1>
+                <p className="lead text-muted mb-3">{userProfile.bio}</p>
+                <div className="d-flex flex-wrap justify-content-center justify-content-sm-start gap-2">
+                  <button onClick={handleEditProfile} className="btn btn-outline-secondary rounded-pill px-4 py-2">
+                    <FaEdit className="me-1" /> Editar Perfil
+                  </button>
+                  <button onClick={handleAddSkill} className="btn btn-primary rounded-pill px-4 py-2">
+                    <FaPlus className="me-1" /> Añadir Habilidad
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          {/* --- */}
-          {/* Skills Section */}
-          <hr className="my-4" />
-          <div className="w-100">
-            <h2 className="h4 fw-bold text-dark mb-3">Habilidades</h2>
+
+            <hr className="my-4" />
+
+            {/* Sección de Habilidades */}
             <div className="row g-4">
+              {/* Habilidades que Ofrece */}
               <div className="col-12 col-md-6">
-                <h3 className="h5 fw-bold text-secondary mb-2">Ofrece</h3>
+                <h2 className="h5 fw-bold text-dark mb-3 d-flex align-items-center">
+                  <FaLaptopCode className="me-2 text-primary" /> Ofrece
+                </h2>
                 <div className="d-flex flex-wrap gap-2">
-                  <span className="badge bg-primary text-wrap rounded-pill px-3 py-1">JavaScript</span>
-                  <span className="badge bg-primary text-wrap rounded-pill px-3 py-1">Node.js</span>
-                  <span className="badge bg-primary text-wrap rounded-pill px-3 py-1">MongoDB</span>
+                  {userProfile.skillsToOffer.map((skill, index) => (
+                    <span 
+                      key={index} 
+                      className="badge bg-primary text-wrap rounded-pill px-3 py-2 fw-normal"
+                    >
+                      {skill}
+                    </span>
+                  ))}
                 </div>
               </div>
+              {/* Habilidades que Quiere Aprender */}
               <div className="col-12 col-md-6">
-                <h3 className="h5 fw-bold text-secondary mb-2">Quiere Aprender</h3>
+                <h2 className="h5 fw-bold text-dark mb-3 d-flex align-items-center">
+                  <FaBookReader className="me-2 text-success" /> Quiere Aprender
+                </h2>
                 <div className="d-flex flex-wrap gap-2">
-                  <span className="badge bg-success text-wrap rounded-pill px-3 py-1">Guitarra</span>
-                  <span className="badge bg-success text-wrap rounded-pill px-3 py-1">Fotografía</span>
+                  {userProfile.skillsToLearn.map((skill, index) => (
+                    <span 
+                      key={index} 
+                      className="badge bg-success text-wrap rounded-pill px-3 py-2 fw-normal"
+                    >
+                      {skill}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-          {/* --- */}
         </div>
       </div>
     </div>
@@ -54,3 +93,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
