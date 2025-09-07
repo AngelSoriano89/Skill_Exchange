@@ -7,7 +7,7 @@ const auth = require('../middleware/auth');
 // @desc    Obtener todos los usuarios con filtro
 // @access  Public
 // Se modifica la ruta para que coincida con el frontend
-router.get('/search', getUsers);
+router.get('/', getUsers);
 
 // @route   GET api/users/me
 // @desc    Obtener el perfil del usuario actual

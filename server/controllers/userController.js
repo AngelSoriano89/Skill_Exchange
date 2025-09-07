@@ -5,11 +5,11 @@ const User = require('../models/User');
 // @access  Public
 exports.getUsers = async (req, res) => {
   try {
-    const { skill } = req.query; // Se corrige el parámetro a 'skill'
+    const { search } = req.query; // Se corrige el parámetro a 'skill'
     let query = {};
 
-    if (skill) {
-      const regex = new RegExp(skill, 'i');
+    if (search) {
+      const regex = new RegExp(search, 'i');
       query = {
         $or: [
           { skills_to_offer: { $in: [regex] } },

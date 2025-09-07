@@ -10,6 +10,7 @@ const {
   acceptExchange,
   rejectExchange,
   completeExchange,
+  getMyExchanges
 } = require('../controllers/exchangeController');
 
 // @route   POST api/exchanges/request
@@ -51,5 +52,10 @@ router.post('/reject/:id', auth, rejectExchange);
 // @desc    Marcar un intercambio como completado
 // @access  Private
 router.put('/complete/:id', auth, completeExchange);
+
+// @route   GET api/exchanges/my-requests
+// @desc    Obtener solicitudes de intercambio
+// @access  Private
+router.get('/my-requests', auth, getMyExchanges);
 
 module.exports = router;

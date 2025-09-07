@@ -19,10 +19,14 @@ const AddSkillPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Enviar la nueva habilidad a la API sin el ID de usuario en la URL
-      await api.post('/skills', formData); 
-      alert('¡Habilidad añadida con éxito!');
-      navigate(`/profile/${user.id}`); // Redirigir al perfil después de añadir
+      if (user) { // CORRECCIÓN: Asegura que el usuario existe
+        // Enviar la nueva habilidad a la API
+        await api.post(`/skills/${user._id}`, formData); // Usa user._id
+        alert('¡Habilidad añadida con éxito!');
+        navigate(`/profile/${user._id}`); // Usa user._id
+      } else {
+        alert('Error: No se encontró el usuario. Por favor, inicia sesión de nuevo.');
+      }
     } catch (err) {
       console.error('Error al añadir la habilidad:', err);
       alert('Hubo un error al guardar la habilidad.');
@@ -64,13 +68,15 @@ const AddSkillPage = () => {
                 </select>
               </div>
               <div className="d-flex justify-content-end gap-2">
+                {user && (
                 <button
                   type="button"
-                  onClick={() => navigate(`/profile/${user.id}`)}
+                  onClick={() => navigate(`/profile/${user._id}`)}
                   className="btn btn-outline-secondary rounded-pill px-4"
                 >
                   <FaArrowLeft className="me-1" /> Volver
                 </button>
+                )}
                 <button type="submit" className="btn btn-primary rounded-pill px-4">
                   <FaSave className="me-1" /> Guardar Habilidad
                 </button>

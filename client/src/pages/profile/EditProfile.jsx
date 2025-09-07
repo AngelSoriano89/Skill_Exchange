@@ -1,8 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { FaUserCircle, FaSave, FaArrowLeft, FaCamera } from 'react-icons/fa';
+import { FaSave, FaArrowLeft, FaCamera } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api'; // Asegúrate de que esta ruta sea correcta
+import api from '../../api/api';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -11,18 +11,19 @@ const EditProfilePage = () => {
     name: '',
     bio: '',
   });
-  const [avatar, setAvatar] = useState(null); // Nuevo estado para la foto de perfil
+  const [avatar, setAvatar] = useState(null); // Estado para el archivo de la imagen
+  const [avatarPreview, setAvatarPreview] = useState(null); // Estado para la URL de vista previa
 
-  // useEffect para cargar los datos actuales del usuario al montar el componente
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
         try {
-          const res = await api.get(`/profile/${user.id}`); // Llama a la API para obtener los datos
-          setFormData({
-            name: res.data.name,
-            bio: res.data.bio,
-          });
+          const res = await api.get(`/profile/${user.id}`);
+          const { name, bio, avatar: userAvatar } = res.data;
+          setFormData({ name, bio });
+          if (userAvatar) {
+            setAvatarPreview(`http://localhost:5000/${userAvatar}`); // Usa la URL completa del avatar
+          }
         } catch (err) {
           console.error('Error al cargar datos del perfil:', err);
         }
@@ -36,32 +37,43 @@ const EditProfilePage = () => {
   };
 
   const handleFileChange = (e) => {
-    setAvatar(e.target.files[0]);
+    const file = e.target.files[0];
+    setAvatar(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAvatarPreview(null);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      // Usar FormData para enviar datos y el archivo
-      const data = new FormData();
-      data.append('name', formData.name);
-      data.append('bio', formData.bio);
-      if (avatar) {
-        data.append('avatar', avatar);
-      }
 
-      // Enviar los datos al backend
-      await api.put(`/profile/${user.id}`, data, {
+    // Creación de FormData para enviar archivos y texto juntos
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('bio', formData.bio);
+    if (avatar) {
+      data.append('avatar', avatar); // 'avatar' debe coincidir con el nombre de campo en multer
+    }
+
+    try {
+      // Envía la solicitud con el objeto FormData
+      const res = await api.put(`/profile/${user.id}`, data, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data', // Asegúrate de que el encabezado sea correcto
         },
       });
-
+      console.log('Perfil actualizado:', res.data);
       alert('¡Perfil actualizado con éxito!');
       navigate(`/profile/${user.id}`);
     } catch (err) {
-      console.error('Error al actualizar el perfil:', err.response.data);
-      alert('Hubo un error al guardar los cambios.');
+      console.error('Error al actualizar el perfil:', err.response?.data?.msg || err.message);
+      alert('Hubo un error al guardar los cambios. Intenta de nuevo.');
     }
   };
 
@@ -70,32 +82,44 @@ const EditProfilePage = () => {
       <div className="container py-5">
         <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: '600px', margin: 'auto' }}>
           <div className="card-body p-4 p-md-5">
-            <h1 className="h3 fw-bold text-dark text-center mb-4 d-flex align-items-center justify-content-center">
-              <FaUserCircle className="me-2" /> Editar Perfil
-            </h1>
+            <h1 className="h4 fw-bold text-center mb-4">Editar Perfil</h1>
             <form onSubmit={handleSubmit}>
               {/* Sección de la foto de perfil */}
               <div className="d-flex flex-column align-items-center mb-4">
                 <div
-                  className="position-relative d-inline-block"
-                  style={{ width: '120px', height: '120px' }}
+                  className="position-relative d-flex justify-content-center align-items-center bg-light rounded-circle"
+                  style={{ width: '128px', height: '128px', overflow: 'hidden' }}
                 >
-                  <FaUserCircle className="text-secondary bg-light rounded-circle" style={{ width: '100%', height: '100%' }} />
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar de perfil"
+                      className="img-fluid rounded-circle"
+                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                    />
+                  ) : (
+                    <div
+                      className="bg-secondary bg-opacity-25 text-dark d-flex align-items-center justify-content-center fw-bold rounded-circle"
+                      style={{ width: '128px', height: '128px', fontSize: '3rem' }}
+                    >
+                      {formData.name ? formData.name.charAt(0).toUpperCase() : 'N/A'}
+                    </div>
+                  )}
                   <label
-                    htmlFor="avatar-upload"
-                    className="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle p-2"
-                    style={{ transform: 'translate(25%, 25%)' }}
+                    htmlFor="avatarInput"
+                    className="position-absolute bottom-0 end-0 p-2 bg-primary rounded-circle text-white shadow-sm"
+                    style={{ cursor: 'pointer' }}
                   >
                     <FaCamera />
-                    <input
-                      type="file"
-                      id="avatar-upload"
-                      name="avatar"
-                      accept="image/*"
-                      className="d-none"
-                      onChange={handleFileChange}
-                    />
                   </label>
+                  <input
+                    type="file"
+                    id="avatarInput"
+                    name="avatar"
+                    className="d-none"
+                    onChange={handleFileChange}
+                    accept="image/*"
+                  />
                 </div>
               </div>
 
