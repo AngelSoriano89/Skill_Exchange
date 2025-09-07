@@ -1,19 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const LandingPage = () => {
-  const navigate = useNavigate();
-
-  const handleRegisterClick = (e) => {
-    e.preventDefault(); // Previene la navegación por defecto del <a>
-    navigate('/register');
-  };
-
-  const handleLoginClick = (e) => {
-    e.preventDefault(); // Previene la navegación por defecto del <a>
-    navigate('/login');
-  };
-
   return (
     <div className="min-vh-100 bg-light d-flex flex-column justify-content-center align-items-center p-3">
       <div className="container text-center bg-white p-4 rounded-4 shadow-lg hover-scale" style={{ maxWidth: '900px' }}>
@@ -26,21 +14,20 @@ const LandingPage = () => {
         </p>
 
         <div className="d-grid d-sm-flex justify-content-center gap-2">
-          <a
-            href="/register"
+          {/* Usamos <Link> en lugar de <a> para la navegación de React Router */}
+          <Link
+            to="/register"
             className="btn btn-primary btn-md rounded-pill text-white gradient-button shadow-lg hover-lift"
-            onClick={handleRegisterClick}
           >
             Regístrate Ahora
-          </a>
+          </Link>
           
-          <a
-            href="/login"
-            className="btn btn-outline-secondary btn-md rounded-pill text-dark hover-lift"
-            onClick={handleLoginClick}
+          <Link
+            to="/login"
+            className="btn btn-outline-secondary btn-md rounded-pill px-4"
           >
-            Inicia Sesión
-          </a>
+            Iniciar Sesión
+          </Link>
         </div>
       </div>
     </div>

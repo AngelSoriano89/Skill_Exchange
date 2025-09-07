@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../../api/api';
+import api from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 import { FaEnvelope, FaPhone, FaCheckCircle } from 'react-icons/fa';
 

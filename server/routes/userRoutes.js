@@ -3,10 +3,11 @@ const router = express.Router();
 const { getUsers, getLoggedInUser, getUserById } = require('../controllers/userController');
 const auth = require('../middleware/auth');
 
-// @route   GET api/users
-// @desc    Obtener todos los usuarios
+// @route   GET api/users/search
+// @desc    Obtener todos los usuarios con filtro
 // @access  Public
-router.get('/', getUsers);
+// Se modifica la ruta para que coincida con el frontend
+router.get('/search', getUsers);
 
 // @route   GET api/users/me
 // @desc    Obtener el perfil del usuario actual

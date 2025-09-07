@@ -1,15 +1,15 @@
 const User = require('../models/User');
 
-// @route   GET api/users
-// @desc    Obtener todos los usuarios con un filtro de búsqueda opcional
+// @route   GET api/users/search
+// @desc    Obtener todos los usuarios con un filtro de búsqueda de habilidades
 // @access  Public
 exports.getUsers = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { skill } = req.query; // Se corrige el parámetro a 'skill'
     let query = {};
 
-    if (search) {
-      const regex = new RegExp(search, 'i');
+    if (skill) {
+      const regex = new RegExp(skill, 'i');
       query = {
         $or: [
           { skills_to_offer: { $in: [regex] } },

@@ -5,7 +5,6 @@ import api from '../../api/api';
 const RegisterPage = () => {
   const navigate = useNavigate();
 
-  // Estados para cada campo del formulario
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,12 +16,10 @@ const RegisterPage = () => {
     event.preventDefault();
     setError(null);
 
-    // Convertir las cadenas de habilidades a arrays
-    const skills_to_offer_array = skillsToOffer.split(',').map(skill => skill.trim());
-    const skills_to_learn_array = skillsToLearn.split(',').map(skill => skill.trim());
+    const skills_to_offer_array = skillsToOffer.split(',').map(skill => skill.trim()).filter(Boolean);
+    const skills_to_learn_array = skillsToLearn.split(',').map(skill => skill.trim()).filter(Boolean);
 
     try {
-      // Envía los datos del usuario al backend
       await api.post('/auth/register', { 
         name, 
         email, 
@@ -31,34 +28,34 @@ const RegisterPage = () => {
         skills_to_learn: skills_to_learn_array
       });
 
-      // Muestra un mensaje de éxito y redirige al login
       alert('Registro exitoso. ¡Ahora puedes iniciar sesión!');
       navigate('/login');
     } catch (err) {
-      console.error('Error al registrar el usuario:', err);
-      // Muestra el mensaje de error del backend o uno genérico
-      if (err.response && err.response.data && err.response.data.msg) {
-        setError(err.response.data.msg);
-      } else {
-        setError('Ocurrió un error al intentar registrarte. Por favor, intenta de nuevo.');
-      }
+      console.error('Error de registro:', err);
+      // Uso de encadenamiento opcional para un manejo de errores más seguro
+      setError(
+        err.response?.data?.msg ||
+        'Ocurrió un error al registrarse. Por favor, intenta de nuevo.'
+      );
     }
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100 justify-content-center align-items-center bg-light">
-      <div className="bg-white p-5 rounded-4 shadow-lg w-100" style={{ maxWidth: '400px' }}>
-        <h2 className="fs-3 fw-bold text-center text-dark mb-4">Regístrate</h2>
+    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+      <div className="bg-white p-5 rounded-4 shadow-lg" style={{ maxWidth: '450px', width: '100%' }}>
+        <div className="text-center mb-4">
+          <h1 className="h4 fw-bold text-dark mt-3">Crea tu cuenta</h1>
+          <p className="text-muted small">Únete a la comunidad de intercambio de habilidades.</p>
+        </div>
         <form onSubmit={handleSubmit}>
           {/* Campo de Nombre */}
           <div className="mb-3">
-            <label htmlFor="name" className="form-label text-secondary fw-semibold">
-              Nombre
-            </label>
+            <label htmlFor="name" className="form-label fw-semibold text-secondary">Nombre Completo</label>
             <input
               type="text"
               id="name"
-              className="form-control"
+              className="form-control rounded-pill"
+              placeholder="Tu nombre"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -66,27 +63,25 @@ const RegisterPage = () => {
           </div>
           {/* Campo de Correo */}
           <div className="mb-3">
-            <label htmlFor="email" className="form-label text-secondary fw-semibold">
-              Correo Electrónico
-            </label>
+            <label htmlFor="email" className="form-label fw-semibold text-secondary">Correo Electrónico</label>
             <input
               type="email"
               id="email"
-              className="form-control"
+              className="form-control rounded-pill"
+              placeholder="tu@correo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           {/* Campo de Contraseña */}
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label text-secondary fw-semibold">
-              Contraseña
-            </label>
+          <div className="mb-4">
+            <label htmlFor="password" className="form-label fw-semibold text-secondary">Contraseña</label>
             <input
               type="password"
               id="password"
-              className="form-control"
+              className="form-control rounded-pill"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -100,7 +95,8 @@ const RegisterPage = () => {
             <input
               type="text"
               id="skills_to_offer"
-              className="form-control"
+              className="form-control rounded-pill"
+              placeholder="Ej. 'Diseño Web, Cocina'"
               value={skillsToOffer}
               onChange={(e) => setSkillsToOffer(e.target.value)}
             />
@@ -113,7 +109,8 @@ const RegisterPage = () => {
             <input
               type="text"
               id="skills_to_learn"
-              className="form-control"
+              className="form-control rounded-pill"
+              placeholder="Ej. 'Guitarra, Fotografía'"
               value={skillsToLearn}
               onChange={(e) => setSkillsToLearn(e.target.value)}
             />

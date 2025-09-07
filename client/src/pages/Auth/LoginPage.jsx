@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext'; // Asegúrate de que la ruta sea correcta
-import { FaUserCircle } from 'react-icons/fa'; // Icono opcional para el formulario
+import { AuthContext } from '../../context/AuthContext';
+import { FaUserCircle } from 'react-icons/fa';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -13,30 +13,28 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null); // Resetear cualquier error previo
+    setError(null);
 
     try {
       await login(email, password);
-      navigate('/dashboard'); // Redirige al dashboard al iniciar sesión con éxito
+      navigate('/dashboard');
     } catch (err) {
       console.error('Error de inicio de sesión:', err);
-      // Muestra un mensaje de error si las credenciales son inválidas
-      if (err.response && err.response.data && err.response.data.msg) {
-        setError(err.response.data.msg);
-      } else {
-        setError('Ocurrió un error al iniciar sesión. Por favor, intenta de nuevo.');
-      }
+      // Uso de encadenamiento opcional para un manejo de errores más seguro
+      setError(
+        err.response?.data?.msg ||
+        'Ocurrió un error al iniciar sesión. Por favor, intenta de nuevo.'
+      );
     }
   };
 
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="bg-white p-5 rounded-4 shadow-lg" style={{ maxWidth: '480px', width: '100%' }}>
+      <div className="bg-white p-5 rounded-4 shadow-lg" style={{ maxWidth: '450px', width: '100%' }}>
         <div className="text-center mb-4">
-          <FaUserCircle size={60} className="text-primary mb-3" />
-          <h2 className="fw-bold text-dark">Iniciar Sesión</h2>
+          <FaUserCircle size={60} className="text-primary" />
+          <h1 className="h4 fw-bold text-dark mt-3">Iniciar Sesión</h1>
         </div>
-        
         <form onSubmit={handleSubmit}>
           {/* Campo de Correo Electrónico */}
           <div className="mb-3">
@@ -46,7 +44,7 @@ const LoginPage = () => {
             <input
               type="email"
               id="email"
-              className="form-control"
+              className="form-control rounded-pill"
               placeholder="tu@correo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -61,7 +59,7 @@ const LoginPage = () => {
             <input
               type="password"
               id="password"
-              className="form-control"
+              className="form-control rounded-pill"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

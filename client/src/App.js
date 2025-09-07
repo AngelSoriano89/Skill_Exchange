@@ -12,6 +12,7 @@ import SearchPage from './pages/App/SearchPage';
 import NotFound from './pages/Exchange/NotFound'; 
 import EditProfilePage from './pages/profile/EditProfile';
 import AddSkillPage from './pages/profile/AddSkill'; 
+import UserContactPage from "./pages/Exchange/UserContacPage"
 
 // Componente para proteger las rutas
 const PrivateRoute = ({ children }) => {
@@ -74,6 +75,14 @@ const App = () => {
               element={
                 <PrivateRoute>
                   <AddSkillPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/contact/:exchangeId"
+              element={
+                <PrivateRoute>
+                  <UserContactPage />
                 </PrivateRoute>
               }
             />

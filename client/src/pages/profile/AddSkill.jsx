@@ -19,8 +19,8 @@ const AddSkillPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Enviar la nueva habilidad a la API
-      await api.post(`/skills/${user.id}`, formData); // Endpoint de ejemplo
+      // Enviar la nueva habilidad a la API sin el ID de usuario en la URL
+      await api.post('/skills', formData); 
       alert('¡Habilidad añadida con éxito!');
       navigate(`/profile/${user.id}`); // Redirigir al perfil después de añadir
     } catch (err) {
@@ -32,10 +32,10 @@ const AddSkillPage = () => {
   return (
     <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
       <div className="container py-5">
-        <div className="card shadow-lg border-0 rounded-4">
+        <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: '500px', margin: 'auto' }}>
           <div className="card-body p-4 p-md-5">
-            <h1 className="h2 fw-bold text-center text-dark mb-4">
-              <FaPlus className="me-2" /> Añadir Nueva Habilidad
+            <h1 className="h3 fw-bold text-dark text-center mb-4 d-flex align-items-center justify-content-center">
+              <FaPlus className="me-2" /> Añadir Habilidad
             </h1>
             <form onSubmit={handleSubmit}>
               <div className="mb-3">

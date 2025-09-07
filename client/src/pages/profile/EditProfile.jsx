@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { FaUserCircle, FaSave, FaArrowLeft } from 'react-icons/fa';
+import { FaUserCircle, FaSave, FaArrowLeft, FaCamera } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../api/api'; // Asegúrate de que esta ruta sea correcta
@@ -11,6 +11,7 @@ const EditProfilePage = () => {
     name: '',
     bio: '',
   });
+  const [avatar, setAvatar] = useState(null); // Nuevo estado para la foto de perfil
 
   // useEffect para cargar los datos actuales del usuario al montar el componente
   useEffect(() => {
@@ -24,7 +25,6 @@ const EditProfilePage = () => {
           });
         } catch (err) {
           console.error('Error al cargar datos del perfil:', err);
-          // Opcional: Manejar el error, como redirigir a la página de inicio
         }
       }
     };
@@ -35,15 +35,32 @@ const EditProfilePage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    setAvatar(e.target.files[0]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Enviar los datos actualizados a la API
-      await api.put(`/profile/${user.id}`, formData);
+      // Usar FormData para enviar datos y el archivo
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('bio', formData.bio);
+      if (avatar) {
+        data.append('avatar', avatar);
+      }
+
+      // Enviar los datos al backend
+      await api.put(`/profile/${user.id}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       alert('¡Perfil actualizado con éxito!');
-      navigate(`/profile/${user.id}`); // Redirigir al perfil actualizado
+      navigate(`/profile/${user.id}`);
     } catch (err) {
-      console.error('Error al actualizar el perfil:', err);
+      console.error('Error al actualizar el perfil:', err.response.data);
       alert('Hubo un error al guardar los cambios.');
     }
   };
@@ -51,12 +68,38 @@ const EditProfilePage = () => {
   return (
     <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
       <div className="container py-5">
-        <div className="card shadow-lg border-0 rounded-4">
+        <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: '600px', margin: 'auto' }}>
           <div className="card-body p-4 p-md-5">
-            <h1 className="h2 fw-bold text-center text-dark mb-4">
+            <h1 className="h3 fw-bold text-dark text-center mb-4 d-flex align-items-center justify-content-center">
               <FaUserCircle className="me-2" /> Editar Perfil
             </h1>
             <form onSubmit={handleSubmit}>
+              {/* Sección de la foto de perfil */}
+              <div className="d-flex flex-column align-items-center mb-4">
+                <div
+                  className="position-relative d-inline-block"
+                  style={{ width: '120px', height: '120px' }}
+                >
+                  <FaUserCircle className="text-secondary bg-light rounded-circle" style={{ width: '100%', height: '100%' }} />
+                  <label
+                    htmlFor="avatar-upload"
+                    className="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle p-2"
+                    style={{ transform: 'translate(25%, 25%)' }}
+                  >
+                    <FaCamera />
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      name="avatar"
+                      accept="image/*"
+                      className="d-none"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Campos del formulario */}
               <div className="mb-3">
                 <label htmlFor="name" className="form-label fw-semibold">Nombre</label>
                 <input

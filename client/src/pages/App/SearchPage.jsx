@@ -1,33 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaSearch } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import api from '../../api/api'; // Asegúrate de que esta ruta sea correcta
+import UserCard from '../../components/User/UserCard'; // Importa el componente de tarjeta
 
 const SearchPage = () => {
-  // Datos de ejemplo para la lista de usuarios. En el futuro,
-  // aquí usarás el estado de React para mostrar los usuarios de la API.
-  const sampleUsers = [
-    {
-      id: 1,
-      name: 'María López',
-      bio: '¡Maestra de cocina!',
-      skillsToOffer: ['Cocina', 'Repostería'],
-      skillsToLearn: ['Idiomas'],
-    },
-    {
-      id: 2,
-      name: 'Carlos Ruiz',
-      bio: 'Desarrollador full-stack y amante del café.',
-      skillsToOffer: ['React', 'Node.js', 'MongoDB'],
-      skillsToLearn: ['Piano'],
-    },
-    {
-      id: 3,
-      name: 'Ana García',
-      bio: 'Diseñadora gráfica en busca de nuevas habilidades.',
-      skillsToOffer: ['Photoshop', 'Ilustración'],
-      skillsToLearn: ['Fotografía'],
-    },
-  ];
+  const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    // Al cargar el componente, obtiene todos los usuarios
+    const fetchUsers = async () => {
+      try {
+        const res = await api.get('/users'); // Asume que tienes una ruta para obtener todos los usuarios
+        setUsers(res.data);
+      } catch (err) {
+        console.error('Error al obtener los usuarios:', err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleSearch = async () => {
+    try {
+      const res = await api.get(`/users/search?skill=${searchQuery}`);
+      setUsers(res.data);
+    } catch (err) {
+      console.error('Error al buscar usuarios:', err);
+    }
+  };
 
   return (
     <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
@@ -44,46 +44,25 @@ const SearchPage = () => {
               type="text"
               placeholder="Buscar por habilidad (ej. Piano, Cocina, Programación)"
               className="form-control border-start-0 py-2"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button className="btn btn-primary rounded-end-pill px-4">
+            <button onClick={handleSearch} className="btn btn-primary rounded-end-pill px-4">
               Buscar
             </button>
           </div>
         </div>
-        
+
         <div className="row g-4 justify-content-center">
-          {sampleUsers.map((user) => (
-            <div key={user.id} className="col-12 col-sm-6 col-md-4 col-lg-3">
-              <div className="card h-100 rounded-4 shadow-sm text-center p-3 hover-lift">
-                <div className="card-body d-flex flex-column">
-                  <h3 className="h5 fw-semibold text-dark mb-2">{user.name}</h3>
-                  <p className="text-muted small mb-3 flex-grow-1">{user.bio}</p>
-                  
-                  <div className="mb-3">
-                    <h4 className="fw-semibold text-secondary mb-1 small">Ofrece:</h4>
-                    <div className="d-flex flex-wrap justify-content-center gap-1">
-                      {user.skillsToOffer.map((skill, index) => (
-                        <span key={index} className="badge bg-primary text-wrap fw-normal">{skill}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <h4 className="fw-semibold text-secondary mb-1 small">Quiere Aprender:</h4>
-                    <div className="d-flex flex-wrap justify-content-center gap-1">
-                      {user.skillsToLearn.map((skill, index) => (
-                        <span key={index} className="badge bg-success text-wrap fw-normal">{skill}</span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Link to={`/profile/${user.id}`} className="btn btn-primary rounded-pill mt-auto">
-                    Ver Perfil
-                  </Link>
-                </div>
+          {users.length > 0 ? (
+            users.map((user) => (
+              <div key={user._id} className="col-12 col-sm-6 col-md-4 col-lg-3">
+                <UserCard user={user} />
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-muted text-center">No se encontraron usuarios.</p>
+          )}
         </div>
       </div>
     </div>

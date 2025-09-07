@@ -50,6 +50,7 @@ UserSchema.pre('save', async function (next) {
   
   // Hashear la contraseña usando el salt y reemplazarla en el documento
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 module.exports = mongoose.model('user', UserSchema);

@@ -1,8 +1,9 @@
 import React from 'react';
 
-const SkillTag = ({ skill }) => {
+const SkillTag = ({ skill, color = 'primary' }) => {
+  const badgeClasses = `badge bg-${color} text-wrap me-2 mb-2 p-2`;
   return (
-    <span className="badge bg-primary text-wrap me-2 mb-2 p-2">
+    <span className={badgeClasses}>
       {skill}
     </span>
   );

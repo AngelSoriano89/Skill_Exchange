@@ -12,10 +12,14 @@ const ExchangeRequestModal = ({ onClose, recipient }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Filtrar habilidades vacías para evitar enviar strings en blanco
+      const offeredSkills = skills_to_offer.filter(skill => skill.trim() !== '');
+      const learnedSkills = skills_to_learn.filter(skill => skill.trim() !== '');
+
       await api.post('/exchanges/request', {
         recipientId: recipient._id,
-        skills_to_offer,
-        skills_to_learn,
+        skills_to_offer: offeredSkills,
+        skills_to_learn: learnedSkills,
         message,
       });
       setSuccess(true);
@@ -31,25 +35,18 @@ const ExchangeRequestModal = ({ onClose, recipient }) => {
       <div className="modal-dialog modal-dialog-centered" role="document">
         <div className="modal-content rounded-3 shadow-lg p-3">
           <div className="modal-header border-0 pb-0 d-flex justify-content-end">
-            <button
-              type="button"
-              className="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-              onClick={onClose}
-            ></button>
+            <button type="button" className="btn-close" aria-label="Close" onClick={onClose}></button>
           </div>
-          <div className="modal-body text-center pt-0">
-            <h3 className="h5 fw-semibold mb-3">
-              Solicitar Intercambio a {recipient.name}
-            </h3>
+          <div className="modal-body">
+            <h5 className="modal-title text-center fw-bold mb-3">
+              Enviar Solicitud a {recipient.name}
+            </h5>
             {success ? (
-              <div className="text-center text-success">
-                <p>¡Solicitud enviada con éxito!</p>
-                <button
-                  onClick={onClose}
-                  className="btn btn-success rounded-pill mt-4 px-4"
-                >
+              <div className="text-center p-4">
+                <p className="fs-5 text-success">
+                  ¡Solicitud enviada con éxito!
+                </p>
+                <button className="btn btn-primary mt-3" onClick={onClose}>
                   Cerrar
                 </button>
               </div>
@@ -57,26 +54,26 @@ const ExchangeRequestModal = ({ onClose, recipient }) => {
               <form onSubmit={handleSubmit}>
                 {/* Mensaje */}
                 <div className="mb-3">
-                  <label className="form-label fw-bold text-dark">
-                    Mensaje
+                  <label htmlFor="message" className="form-label fw-bold text-dark">
+                    Mensaje (opcional)
                   </label>
                   <textarea
                     className="form-control"
-                    rows="4"
+                    id="message"
+                    rows="3"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    required
-                  />
+                  ></textarea>
                 </div>
                 {/* Habilidades que ofreces */}
                 <div className="mb-3">
                   <label className="form-label fw-bold text-dark">
-                    Habilidades que ofreces
+                    Habilidades que quieres ofrecer
                   </label>
                   <input
                     className="form-control"
                     type="text"
-                    placeholder="Ej. 'Inglés, Cocina'"
+                    placeholder="Ej. 'Desarrollo Web, Jardinería'"
                     value={skills_to_offer.join(', ')}
                     onChange={(e) =>
                       setSkillsToOffer(e.target.value.split(',').map((s) => s.trim()))
@@ -92,7 +89,7 @@ const ExchangeRequestModal = ({ onClose, recipient }) => {
                   <input
                     className="form-control"
                     type="text"
-                    placeholder="Ej. 'Música, Jardinería'"
+                    placeholder="Ej. 'Música, Fotografía'"
                     value={skills_to_learn.join(', ')}
                     onChange={(e) =>
                       setSkillsToLearn(e.target.value.split(',').map((s) => s.trim()))

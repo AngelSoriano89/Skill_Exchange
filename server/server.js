@@ -10,6 +10,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const userRoutes = require('./routes/userRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const exchangeRoutes = require('./routes/exchangeRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
 
 require('dotenv').config();
 
@@ -17,6 +18,7 @@ const app = express();
 connectDB();
 
 // Middlewares
+app.use('/uploads', express.static('uploads'));
 app.use(express.json({ extended: false }));
 app.use(cors(corsOptions));
 
@@ -26,6 +28,7 @@ app.use('/api/profile', profileRoutes); // Ruta de perfil (correcta)
 app.use('/api/users', userRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/exchanges', exchangeRoutes);
+app.use('/api/ratings', ratingRoutes);
 
 const PORT = process.env.PORT || 5000;
 
