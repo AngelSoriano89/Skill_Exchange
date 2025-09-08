@@ -3,6 +3,8 @@ const connectDB = require('./config/database');
 const cors = require('cors');
 const corsOptions = require('./config/corsOptions');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
 
 // Importar todos los archivos de rutas de una sola vez
 const authRoutes = require('./routes/authRoutes');
@@ -21,6 +23,26 @@ connectDB();
 app.use('/uploads', express.static('uploads'));
 app.use(express.json({ extended: false }));
 app.use(cors(corsOptions));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+
+// Ruta de bienvenida con información de la API
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API de Intercambio de Habilidades',
+    version: '1.0.0',
+    documentation: '/api-docs',
+    endpoints: {
+      auth: '/api/auth',
+      skills: '/api/skills',
+      exchanges: '/api/exchanges',
+      ratings: '/api/ratings',
+      users: '/api/users',
+      profile: '/api/profile'
+    }
+  });
+});
 
 // Definir rutas de la API
 app.use('/api/auth', authRoutes);

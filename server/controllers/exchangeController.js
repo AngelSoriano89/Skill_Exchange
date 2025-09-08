@@ -96,19 +96,43 @@ exports.getCompletedExchanges = async (req, res) => {
 // @access  Private
 exports.acceptExchange = async (req, res) => {
   try {
-    let exchange = await Exchange.findById(req.params.id);
+    let exchange = await Exchange.findById(req.params.id)
+      .populate('sender', 'name email phone')
+      .populate('recipient', 'name email phone');
 
     if (!exchange) {
       return res.status(404).json({ msg: 'Solicitud de intercambio no encontrada' });
     }
 
     // Asegurarse de que solo el destinatario puede aceptar la solicitud
-    if (exchange.recipient.toString() !== req.user.id) {
+    if (exchange.recipient._id.toString() !== req.user.id) {
       return res.status(401).json({ msg: 'No autorizado para aceptar esta solicitud' });
     }
 
     exchange.status = 'accepted';
+    
+    // Desbloquear información de contacto
+    exchange.contactInfo.isUnlocked = true;
+    exchange.contactInfo.unlockedAt = new Date();
+    
+    // Guardar información de contacto de ambos usuarios
+    exchange.contactInfo.senderContactInfo = {
+      email: exchange.sender.email,
+      phone: exchange.sender.phone || ''
+    };
+    
+    exchange.contactInfo.recipientContactInfo = {
+      email: exchange.recipient.email,
+      phone: exchange.recipient.phone || ''
+    };
+    
     await exchange.save();
+    
+    // Recargar con la información actualizada
+    exchange = await Exchange.findById(req.params.id)
+      .populate('sender', 'name email avatar')
+      .populate('recipient', 'name email avatar');
+      
     res.json(exchange);
   } catch (err) {
     console.error(err.message);
@@ -135,6 +159,60 @@ exports.rejectExchange = async (req, res) => {
     exchange.status = 'rejected';
     await exchange.save();
     res.json(exchange);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
+
+// @route   GET api/exchanges/contact/:id
+// @desc    Obtener información de contacto de un intercambio aceptado
+// @access  Private
+exports.getContactInfo = async (req, res) => {
+  try {
+    const exchange = await Exchange.findById(req.params.id)
+      .populate('sender', 'name email avatar')
+      .populate('recipient', 'name email avatar');
+
+    if (!exchange) {
+      return res.status(404).json({ msg: 'Intercambio no encontrado' });
+    }
+
+    // Verificar que el usuario es parte del intercambio
+    if (
+      exchange.sender._id.toString() !== req.user.id &&
+      exchange.recipient._id.toString() !== req.user.id
+    ) {
+      return res.status(401).json({ msg: 'No autorizado' });
+    }
+
+    // Verificar que el intercambio fue aceptado
+    if (exchange.status !== 'accepted' && exchange.status !== 'completed') {
+      return res.status(400).json({ msg: 'La información de contacto solo está disponible para intercambios aceptados' });
+    }
+
+    // Verificar que la información de contacto fue desbloqueada
+    if (!exchange.contactInfo.isUnlocked) {
+      return res.status(400).json({ msg: 'Información de contacto no disponible' });
+    }
+
+    // Devolver la información de contacto del otro usuario
+    const isUserSender = exchange.sender._id.toString() === req.user.id;
+    const contactInfo = isUserSender 
+      ? exchange.contactInfo.recipientContactInfo
+      : exchange.contactInfo.senderContactInfo;
+    
+    const otherUser = isUserSender ? exchange.recipient : exchange.sender;
+
+    res.json({
+      user: {
+        name: otherUser.name,
+        email: contactInfo.email,
+        phone: contactInfo.phone,
+        avatar: otherUser.avatar
+      },
+      unlockedAt: exchange.contactInfo.unlockedAt
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Error del servidor');

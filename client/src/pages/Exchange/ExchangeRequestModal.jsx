@@ -1,32 +1,48 @@
 import React, { useState } from 'react';
-import { FaTimes, FaEnvelope } from 'react-icons/fa';
-import api from '../../api/api';
+import { FaTimes, FaEnvelope, FaUser, FaStar } from 'react-icons/fa';
+import exchangeService from '../../services/exchangeService';
+import { handleApiError, showSuccessAlert, showLoadingAlert, closeLoadingAlert } from '../../utils/sweetAlert';
 
-const ExchangeRequestModal = ({ onClose, recipient }) => {
-  const [message, setMessage] = useState('');
-  const [skills_to_offer, setSkillsToOffer] = useState([]);
-  const [skills_to_learn, setSkillsToLearn] = useState([]);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(null);
+const ExchangeRequestModal = ({ onClose, recipientId, recipientName, skillTitle }) => {
+  const [formData, setFormData] = useState({
+    message: '',
+    skills_to_offer: '',
+    skills_to_learn: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    showLoadingAlert('Enviando solicitud...', 'Procesando tu solicitud de intercambio');
+    
     try {
-      // Filtrar habilidades vacías para evitar enviar strings en blanco
-      const offeredSkills = skills_to_offer.filter(skill => skill.trim() !== '');
-      const learnedSkills = skills_to_learn.filter(skill => skill.trim() !== '');
-
-      await api.post('/exchanges/request', {
-        recipientId: recipient._id,
-        skills_to_offer: offeredSkills,
-        skills_to_learn: learnedSkills,
-        message,
+      const skills_to_offer_array = formData.skills_to_offer.split(',').map(skill => skill.trim()).filter(Boolean);
+      const skills_to_learn_array = formData.skills_to_learn.split(',').map(skill => skill.trim()).filter(Boolean);
+      
+      await exchangeService.createExchangeRequest({
+        recipientId,
+        skills_to_offer: skills_to_offer_array,
+        skills_to_learn: skills_to_learn_array,
+        message: formData.message
       });
-      setSuccess(true);
-      setError(null);
-    } catch (err) {
-      setError('Error al enviar la solicitud. Intenta de nuevo.');
-      console.error(err);
+      
+      closeLoadingAlert();
+      showSuccessAlert('¡Solicitud enviada!', 'Se ha notificado al usuario sobre tu interés.');
+      onClose();
+    } catch (error) {
+      closeLoadingAlert();
+      handleApiError(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
