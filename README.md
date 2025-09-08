@@ -1,6 +1,7 @@
-# Backend de Intercambio de Habilidades
+# Sistema de Intercambio de Habilidades
 
-Este es el backend de la aplicación, construido con Node.js, Express y MongoDB (Mongoose).
+Este sistema permite a los usuarios registrarse, publicar sus habilidades y ofrecerlas como propuestas de intercambio.
+El propósito es crear una comunidad en la que los usuarios puedan aprender mutuamente: por ejemplo, una persona puede ofrecer clases de guitarra a cambio de aprender canto o recibir ayuda en electrónica.
 
 ## Requisitos
 
