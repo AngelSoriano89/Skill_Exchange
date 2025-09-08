@@ -11,7 +11,11 @@ const {
   acceptExchange,
   rejectExchange,
   completeExchange,
+<<<<<<< HEAD
   getContactInfo,
+=======
+  getMyExchanges
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
 } = require('../controllers/exchangeController');
 
 /**
@@ -288,5 +292,10 @@ router.post('/reject/:id', auth, rejectExchange);
  *         description: Intercambio no encontrado
  */
 router.put('/complete/:id', auth, completeExchange);
+
+// @route   GET api/exchanges/my-requests
+// @desc    Obtener solicitudes de intercambio
+// @access  Private
+router.get('/my-requests', auth, getMyExchanges);
 
 module.exports = router;

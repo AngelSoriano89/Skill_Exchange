@@ -1,12 +1,15 @@
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+<<<<<<< HEAD
 import { FaUser, FaSearch, FaTachometerAlt, FaExchangeAlt, FaStar, FaBell, FaCog, FaSignOutAlt, FaCheck, FaTimes } from 'react-icons/fa';
 import { showConfirmAlert } from '../../utils/sweetAlert';
 import exchangeService from '../../services/exchangeService';
+=======
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
 
 const Header = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, loading } = useContext(AuthContext); // Añade 'loading'
   const navigate = useNavigate();
   const location = useLocation();
   const [notifications, setNotifications] = useState([]);
@@ -74,6 +77,7 @@ const Header = () => {
   };
 
   return (
+<<<<<<< HEAD
     <header className="bg-white shadow-sm sticky-top">
       <nav className="navbar navbar-expand-lg navbar-light py-3">
         <div className="container">
@@ -84,6 +88,13 @@ const Header = () => {
           >
             <FaExchangeAlt className="text-primary me-2" size={24} />
             <span className="fs-4 fw-bold text-dark">SkillExchange</span>
+=======
+    <header className="bg-white shadow-sm py-3">
+      <nav className="navbar navbar-expand-lg navbar-light">
+        <div className="container-fluid">
+          <Link to={user ? "/dashboard" : "/"} className="navbar-brand fs-4 fw-bold text-dark">
+            Skill Exchange
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
           </Link>
 
           <button 
@@ -99,10 +110,17 @@ const Header = () => {
           </button>
 
           <div className="collapse navbar-collapse" id="navbarNav">
+<<<<<<< HEAD
             {user ? (
               // Menu para usuarios autenticados
               <>
                 <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+=======
+            <ul className="navbar-nav ms-auto mb-2 mb-lg-0">
+              {/* Muestra los enlaces de usuario solo si no está cargando y el usuario existe */}
+              {user && !loading ? (
+                <>
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
                   <li className="nav-item">
                     <Link 
                       to="/dashboard" 
@@ -125,7 +143,9 @@ const Header = () => {
                       Explorar
                     </Link>
                   </li>
+                  {user && (
                   <li className="nav-item">
+<<<<<<< HEAD
                     <Link 
                       to="/skills/add" 
                       className={`nav-link d-flex align-items-center px-3 py-2 rounded-pill transition-all ${
@@ -156,6 +176,17 @@ const Header = () => {
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
+=======
+                    {/* El enlace de Perfil ahora solo se renderiza si user.id existe */}
+                    <Link to={`/profile/${user._id}`} className="nav-link text-secondary">
+                      Perfil
+                    </Link>
+                  </li>
+                  )}
+                  <li className="nav-item ms-lg-3">
+                    <button onClick={handleLogout} className="btn btn-primary rounded-pill px-4">
+                      Cerrar Sesión
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
                     </button>
                     
                     <div className="dropdown-menu dropdown-menu-end shadow-lg border-0" 

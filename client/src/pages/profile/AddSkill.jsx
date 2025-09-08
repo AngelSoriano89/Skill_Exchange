@@ -67,6 +67,7 @@ const AddSkillPage = () => {
     showLoadingAlert('Publicando habilidad...', 'Creando tu nueva habilidad');
     
     try {
+<<<<<<< HEAD
       await skillService.createSkill(formData);
       closeLoadingAlert();
       showSuccessAlert('¡Habilidad publicada!', 'Tu habilidad ya está visible para otros usuarios.');
@@ -76,6 +77,19 @@ const AddSkillPage = () => {
       handleApiError(error);
     } finally {
       setIsLoading(false);
+=======
+      if (user) { // CORRECCIÓN: Asegura que el usuario existe
+        // Enviar la nueva habilidad a la API
+        await api.post(`/skills/${user._id}`, formData); // Usa user._id
+        alert('¡Habilidad añadida con éxito!');
+        navigate(`/profile/${user._id}`); // Usa user._id
+      } else {
+        alert('Error: No se encontró el usuario. Por favor, inicia sesión de nuevo.');
+      }
+    } catch (err) {
+      console.error('Error al añadir la habilidad:', err);
+      alert('Hubo un error al guardar la habilidad.');
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
     }
   };
 
@@ -319,6 +333,7 @@ const AddSkillPage = () => {
                   </div>
                 </form>
               </div>
+<<<<<<< HEAD
             </div>
             
             {/* Información adicional */}
@@ -331,6 +346,21 @@ const AddSkillPage = () => {
                   <li>Menciona cualquier prerrequisito necesario</li>
                   <li>Sé honesto sobre tu nivel de experiencia</li>
                 </ul>
+=======
+              <div className="d-flex justify-content-end gap-2">
+                {user && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/profile/${user._id}`)}
+                  className="btn btn-outline-secondary rounded-pill px-4"
+                >
+                  <FaArrowLeft className="me-1" /> Volver
+                </button>
+                )}
+                <button type="submit" className="btn btn-primary rounded-pill px-4">
+                  <FaSave className="me-1" /> Guardar Habilidad
+                </button>
+>>>>>>> 8be2632a23ad0f0a877621d5db145efe8ff24e19
               </div>
             </div>
           </div>

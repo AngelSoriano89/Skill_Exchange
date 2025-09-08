@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaEdit, FaPlus, FaLaptopCode, FaBookReader } from 'react-icons/fa';
+import { FaUserCircle, FaEdit, FaPlus, FaEnvelope, FaLaptopCode, FaBookReader } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../api/api';
 
@@ -40,15 +40,47 @@ const ProfilePage = () => {
     );
   }
 
-  if (error || !userProfile) {
+  if (error) {
     return (
-      <div className="alert alert-danger text-center mt-5">
-        {error || 'Perfil no encontrado.'}
+      <div className="d-flex justify-content-center align-items-center min-vh-100 text-center">
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
       </div>
     );
   }
 
-  const isMyProfile = user && user.id === id;
+  const handleEditProfile = () => {
+    navigate('/profile/edit');
+  };
+
+  const handleAddSkill = () => {
+    navigate('/skills/add');
+  };
+
+  const handleSendRequest = async () => {
+    try {
+      if (!user) {
+        alert('Debes iniciar sesión para enviar una solicitud.');
+        return;
+      }
+
+      await api.post('/exchanges/request', {
+        recipientId: userProfile._id,
+        skills_to_offer: user.skills_to_offer,
+        skills_to_learn: user.skills_to_learn,
+        message: `Hola, me gustaría intercambiar habilidades contigo. ¡Hablemos!`,
+      });
+
+      alert('¡Solicitud de intercambio enviada con éxito!');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Error al enviar la solicitud:', err);
+      alert('Hubo un error al enviar la solicitud. Por favor, intenta de nuevo.');
+    }
+  };
+
+  const isOwner = user && userProfile && user.id === userProfile._id;
 
   return (
     <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
@@ -57,39 +89,35 @@ const ProfilePage = () => {
           <div className="card-body p-4 p-md-5">
             {/* Encabezado del Perfil */}
             <div className="d-flex flex-column flex-sm-row align-items-center align-items-sm-start mb-4">
-              <div 
-                className="bg-light rounded-circle me-sm-4 mb-3 mb-sm-0 d-flex justify-content-center align-items-center"
-                style={{ width: '120px', height: '120px' }}
+              <div
+                className="bg-light rounded-circle me-sm-4 mb-3 mb-sm-0 d-flex justify-content-center align-items-center text-primary"
+                style={{ width: '96px', height: '96px', fontSize: '3.5rem' }}
               >
-                <FaUserCircle size={100} className="text-secondary" />
+                <FaUserCircle />
               </div>
-              <div className="text-center text-sm-start flex-grow-1">
-                <h1 className="display-5 fw-bold text-dark">
-                  {userProfile.name}
-                </h1>
-                <p className="lead text-muted mb-3">
-                  {userProfile.bio || 'Sin biografía.'}
-                </p>
-                {/* Botones de acción solo si es mi perfil */}
-                {isMyProfile && (
-                  <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-sm-start">
-                    <button
-                      onClick={() => navigate('/profile/edit')}
-                      className="btn btn-outline-primary btn-sm rounded-pill px-4"
-                    >
-                      <FaEdit className="me-2" /> Editar Perfil
-                    </button>
-                    <button
-                      onClick={() => navigate('/skills/add')}
-                      className="btn btn-primary btn-sm rounded-pill px-4"
-                    >
-                      <FaPlus className="me-2" /> Añadir Habilidad
-                    </button>
-                  </div>
-                )}
+              <div>
+                <h1 className="display-5 fw-bold text-dark">{userProfile.name}</h1>
+                <p className="lead text-muted">{userProfile.bio}</p>
               </div>
             </div>
-            {/* /Encabezado del Perfil */}
+
+            {/* Acciones de Perfil */}
+            <div className="d-flex flex-wrap gap-2 mb-4">
+              {isOwner ? (
+                <>
+                  <button onClick={handleEditProfile} className="btn btn-outline-primary rounded-pill px-4">
+                    <FaEdit className="me-2" /> Editar Perfil
+                  </button>
+                  <button onClick={handleAddSkill} className="btn btn-outline-success rounded-pill px-4">
+                    <FaPlus className="me-2" /> Añadir Habilidad
+                  </button>
+                </>
+              ) : (
+                <button onClick={handleSendRequest} className="btn btn-primary rounded-pill px-4">
+                  <FaEnvelope className="me-2" /> Enviar Solicitud de Intercambio
+                </button>
+              )}
+            </div>
 
             <hr className="my-4" />
 

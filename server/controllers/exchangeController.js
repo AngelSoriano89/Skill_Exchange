@@ -251,3 +251,11 @@ exports.completeExchange = async (req, res) => {
     res.status(500).send('Error del servidor');
   }
 };
+
+exports.getMyExchanges = async (req, res) => {
+  try {
+    // ... tu código de lógica
+  } catch (err) {
+    // ...
+  }
+};
