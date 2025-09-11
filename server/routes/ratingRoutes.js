@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const auth = require('../middleware/auth');
-const { rateExchange, getUserRatings } = require('../controllers/ratingController');
+import auth from '../middleware/auth.js';
+import { rateExchange, getUserRatings } from '../controllers/ratingController.js';
 
 // @route   POST /api/ratings
 // @desc    Calificar un intercambio
@@ -13,4 +13,4 @@ router.post('/', auth, rateExchange);
 // @access  Public
 router.get('/:userId', getUserRatings);
 
-module.exports = router;
+export default router;

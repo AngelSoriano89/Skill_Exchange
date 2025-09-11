@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
   name: {
@@ -18,6 +17,20 @@ const UserSchema = new mongoose.Schema({
   bio: {
     type: String,
     default: '',
+    maxlength: 500,
+  },
+  phone: {
+    type: String,
+    default: '',
+  },
+  location: {
+    type: String,
+    default: '',
+  },
+  experience: {
+    type: String,
+    enum: ['Principiante', 'Intermedio', 'Avanzado', 'Experto', 'Profesional'],
+    default: 'Principiante',
   },
   skills_to_offer: [
     {
@@ -29,28 +42,24 @@ const UserSchema = new mongoose.Schema({
       type: String,
     },
   ],
+  languages: [
+    {
+      type: String,
+    },
+  ],
+  interests: [
+    {
+      type: String,
+    },
+  ],
   avatar: {
     type: String,
+    default: '',
   },
   date: {
     type: Date,
     default: Date.now,
   },
-});
-
-// Middleware para encriptar la contraseña antes de guardar el usuario
-UserSchema.pre('save', async function (next) {
-  // Solo encripta si la contraseña ha sido modificada (al crear o actualizar)
-  if (!this.isModified('password')) {
-    next();
-  }
-  
-  // Generar un "salt" (cadena aleatoria) para la encriptación
-  const salt = await bcrypt.genSalt(10);
-  
-  // Hashear la contraseña usando el salt y reemplazarla en el documento
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 module.exports = mongoose.model('user', UserSchema);

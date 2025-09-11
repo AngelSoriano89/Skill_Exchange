@@ -1,8 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { FaPlus, FaSave, FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api'; // Asegúrate de que esta ruta sea correcta
+import { AuthContext } from '../../context/AuthContext.jsx';
+import api from '../../api/api.jsx'; // Asegúrate de que esta ruta sea correcta
 
 const AddSkillPage = () => {
   const navigate = useNavigate();

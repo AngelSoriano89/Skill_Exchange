@@ -1,128 +1,202 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/api';
 
 const RegisterPage = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    skills_to_offer: '',
+    skills_to_learn: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   const navigate = useNavigate();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [skillsToOffer, setSkillsToOffer] = useState('');
-  const [skillsToLearn, setSkillsToLearn] = useState('');
-  const [error, setError] = useState(null);
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Limpiar error cuando el usuario empiece a escribir
+    if (error) setError('');
+  };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError(null);
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setError('El nombre es obligatorio');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError('El email es obligatorio');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return false;
+    }
+    return true;
+  };
 
-    const skills_to_offer_array = skillsToOffer.split(',').map(skill => skill.trim()).filter(Boolean);
-    const skills_to_learn_array = skillsToLearn.split(',').map(skill => skill.trim()).filter(Boolean);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
 
     try {
-      await api.post('/auth/register', { 
-        name, 
-        email, 
-        password,
-        skills_to_offer: skills_to_offer_array,
-        skills_to_learn: skills_to_learn_array
-      });
+      const submitData = {
+        ...formData,
+        skills_to_offer: formData.skills_to_offer 
+          ? formData.skills_to_offer.split(',').map(s => s.trim()).filter(s => s)
+          : [],
+        skills_to_learn: formData.skills_to_learn 
+          ? formData.skills_to_learn.split(',').map(s => s.trim()).filter(s => s)
+          : []
+      };
 
-      alert('Registro exitoso. ¡Ahora puedes iniciar sesión!');
-      navigate('/login');
+      await api.post('/auth/register', submitData);
+      
+      // Redirigir al login con mensaje de éxito
+      navigate('/login', { 
+        state: { message: '¡Registro exitoso! Ahora puedes iniciar sesión.' }
+      });
     } catch (err) {
-      console.error('Error de registro:', err);
-      // Uso de encadenamiento opcional para un manejo de errores más seguro
-      setError(
-        err.response?.data?.msg ||
-        'Ocurrió un error al registrarse. Por favor, intenta de nuevo.'
-      );
+      console.error('Registration error:', err);
+      setError(err.response?.data?.msg || 'Error al registrarse. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-      <div className="bg-white p-5 rounded-4 shadow-lg" style={{ maxWidth: '450px', width: '100%' }}>
-        <div className="text-center mb-4">
-          <h1 className="h4 fw-bold text-dark mt-3">Crea tu cuenta</h1>
-          <p className="text-muted small">Únete a la comunidad de intercambio de habilidades.</p>
-        </div>
+    <div className="d-flex flex-column min-vh-100 justify-content-center align-items-center bg-light">
+      <div className="bg-white p-5 rounded-4 shadow-lg w-100" style={{ maxWidth: '500px' }}>
+        <h2 className="fs-3 fw-bold text-center text-dark mb-4">Regístrate</h2>
+        
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
-          {/* Campo de Nombre */}
           <div className="mb-3">
-            <label htmlFor="name" className="form-label fw-semibold text-secondary">Nombre Completo</label>
+            <label htmlFor="name" className="form-label text-secondary fw-semibold">
+              Nombre Completo
+            </label>
             <input
               type="text"
+              name="name"
               id="name"
-              className="form-control rounded-pill"
-              placeholder="Tu nombre"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              className={`form-control ${error && !formData.name ? 'is-invalid' : ''}`}
+              placeholder="Tu nombre completo"
+              value={formData.name}
+              onChange={handleChange}
               required
+              disabled={loading}
             />
           </div>
-          {/* Campo de Correo */}
+          
           <div className="mb-3">
-            <label htmlFor="email" className="form-label fw-semibold text-secondary">Correo Electrónico</label>
+            <label htmlFor="email" className="form-label text-secondary fw-semibold">
+              Correo Electrónico
+            </label>
             <input
               type="email"
+              name="email"
               id="email"
-              className="form-control rounded-pill"
+              className={`form-control ${error && !formData.email ? 'is-invalid' : ''}`}
               placeholder="tu@correo.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               required
+              disabled={loading}
             />
           </div>
-          {/* Campo de Contraseña */}
-          <div className="mb-4">
-            <label htmlFor="password" className="form-label fw-semibold text-secondary">Contraseña</label>
+          
+          <div className="mb-3">
+            <label htmlFor="password" className="form-label text-secondary fw-semibold">
+              Contraseña
+            </label>
             <input
               type="password"
+              name="password"
               id="password"
-              className="form-control rounded-pill"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              className={`form-control ${error && formData.password.length < 6 ? 'is-invalid' : ''}`}
+              placeholder="Mínimo 6 caracteres"
+              value={formData.password}
+              onChange={handleChange}
               required
+              disabled={loading}
             />
+            <div className="form-text">Debe tener al menos 6 caracteres</div>
           </div>
-          {/* Habilidades que ofreces */}
+          
           <div className="mb-3">
             <label htmlFor="skills_to_offer" className="form-label text-secondary fw-semibold">
-              Habilidades que ofreces (separadas por comas)
+              Habilidades que ofreces
             </label>
             <input
               type="text"
+              name="skills_to_offer"
               id="skills_to_offer"
-              className="form-control rounded-pill"
-              placeholder="Ej. 'Diseño Web, Cocina'"
-              value={skillsToOffer}
-              onChange={(e) => setSkillsToOffer(e.target.value)}
+              className="form-control"
+              placeholder="Ej: JavaScript, Cocina, Inglés (separadas por comas)"
+              value={formData.skills_to_offer}
+              onChange={handleChange}
+              disabled={loading}
             />
+            <div className="form-text">Opcional - separa con comas</div>
           </div>
-          {/* Habilidades que quieres aprender */}
+          
           <div className="mb-4">
             <label htmlFor="skills_to_learn" className="form-label text-secondary fw-semibold">
-              Habilidades que quieres aprender (separadas por comas)
+              Habilidades que quieres aprender
             </label>
             <input
               type="text"
+              name="skills_to_learn"
               id="skills_to_learn"
-              className="form-control rounded-pill"
-              placeholder="Ej. 'Guitarra, Fotografía'"
-              value={skillsToLearn}
-              onChange={(e) => setSkillsToLearn(e.target.value)}
+              className="form-control"
+              placeholder="Ej: Piano, Fotografía, Python (separadas por comas)"
+              value={formData.skills_to_learn}
+              onChange={handleChange}
+              disabled={loading}
             />
+            <div className="form-text">Opcional - separa con comas</div>
           </div>
-          {error && <div className="alert alert-danger text-center small">{error}</div>}
+          
           <button
             type="submit"
             className="btn btn-primary fw-semibold rounded-pill shadow-sm w-100"
+            disabled={loading}
           >
-            Regístrate
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Registrando...
+              </>
+            ) : (
+              'Regístrate'
+            )}
           </button>
         </form>
+        
+        <div className="text-center mt-3">
+          <p className="text-muted">
+            ¿Ya tienes una cuenta?{' '}
+            <Link to="/login" className="text-decoration-none fw-semibold">
+              Inicia sesión
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

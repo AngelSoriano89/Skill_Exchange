@@ -1,10 +1,9 @@
 // routes/profileRoutes.js
-
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authMiddleware = require('../middleware/auth');
-const profileController = require('../controllers/profileController');
-const multer = require('multer');
+import authMiddleware from '../middleware/auth.js';
+import { getProfileById, updateProfile, addSkill, getContactInfo } from '../controllers/profileController.js';
+import multer from 'multer';
 
 // Configuración de multer para guardar archivos
 const storage = multer.diskStorage({
@@ -28,4 +27,14 @@ router.get('/:id', profileController.getProfileById);
 // @access  Private
 router.put('/:id', authMiddleware, upload.single('avatar'), profileController.updateProfile);
 
-module.exports = router;
+// @route   GET /api/profile/:id/contact
+// @desc    Obtener información de contacto
+// @access  Private
+router.get('/:id/contact', authMiddleware, profileController.getContactInfo);
+
+router.get("/:id", getProfileById);
+router.put("/profile", updateProfile);
+router.post("/profile", addSkill);
+router.get("/profile", getContactInfo);
+
+export default router;

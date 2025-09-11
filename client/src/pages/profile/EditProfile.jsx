@@ -1,171 +1,201 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { FaSave, FaArrowLeft, FaCamera } from 'react-icons/fa';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api';
+import { AuthContext } from '../../context/AuthContext.jsx';
+import api from '../../api/api.jsx';
+import { FaUserCircle, FaSave, FaCamera } from 'react-icons/fa';
 
-const EditProfilePage = () => {
+const EditProfile = () => {
+  const { user, isAuthenticated, checkAuthStatus } = useContext(AuthContext);
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
+    skills_to_offer: '',
+    skills_to_learn: '',
   });
-  const [avatar, setAvatar] = useState(null); // Estado para el archivo de la imagen
-  const [avatarPreview, setAvatarPreview] = useState(null); // Estado para la URL de vista previa
+  const [avatar, setAvatar] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          const res = await api.get(`/profile/${user.id}`);
-          const { name, bio, avatar: userAvatar } = res.data;
-          setFormData({ name, bio });
-          if (userAvatar) {
-            setAvatarPreview(`http://localhost:5000/${userAvatar}`); // Usa la URL completa del avatar
-          }
-        } catch (err) {
-          console.error('Error al cargar datos del perfil:', err);
-        }
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchProfileData = async () => {
+      try {
+        const res = await api.get(`/profile/${user._id}`);
+        const profile = res.data;
+        setFormData({
+          name: profile.name,
+          bio: profile.bio,
+          skills_to_offer: profile.skills_to_offer.join(', '),
+          skills_to_learn: profile.skills_to_learn.join(', '),
+        });
+      } catch (err) {
+        console.error("Error al cargar el perfil:", err);
+        setError("No se pudo cargar la información del perfil.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUserData();
-  }, [user]);
+    fetchProfileData();
+  }, [user, isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setAvatar(file);
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setAvatarPreview(null);
-    }
+    setAvatar(e.target.files[0]);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Creación de FormData para enviar archivos y texto juntos
-    const data = new FormData();
-    data.append('name', formData.name);
-    data.append('bio', formData.bio);
-    if (avatar) {
-      data.append('avatar', avatar); // 'avatar' debe coincidir con el nombre de campo en multer
-    }
+    setLoading(true);
+    setError(null);
+    setSuccess('');
 
     try {
-      // Envía la solicitud con el objeto FormData
-      const res = await api.put(`/profile/${user.id}`, data, {
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('bio', formData.bio);
+      data.append('skills_to_offer', formData.skills_to_offer);
+      data.append('skills_to_learn', formData.skills_to_learn);
+      if (avatar) {
+        data.append('avatar', avatar);
+      }
+
+      await api.put(`/profile/${user._id}`, data, {
         headers: {
-          'Content-Type': 'multipart/form-data', // Asegúrate de que el encabezado sea correcto
+          'Content-Type': 'multipart/form-data',
         },
       });
-      console.log('Perfil actualizado:', res.data);
-      alert('¡Perfil actualizado con éxito!');
-      navigate(`/profile/${user.id}`);
+
+      setSuccess('¡Perfil actualizado con éxito!');
+      checkAuthStatus(); // Actualiza el contexto de autenticación
+      setTimeout(() => navigate(`/profile/${user._id}`), 2000);
+
     } catch (err) {
-      console.error('Error al actualizar el perfil:', err.response?.data?.msg || err.message);
-      alert('Hubo un error al guardar los cambios. Intenta de nuevo.');
+      console.error('Error al actualizar el perfil:', err);
+      setError('Hubo un error al actualizar el perfil. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="d-flex flex-column align-items-center bg-light w-100 p-4 min-vh-100">
-      <div className="container py-5">
-        <div className="card shadow-lg border-0 rounded-4" style={{ maxWidth: '600px', margin: 'auto' }}>
-          <div className="card-body p-4 p-md-5">
-            <h1 className="h4 fw-bold text-center mb-4">Editar Perfil</h1>
-            <form onSubmit={handleSubmit}>
-              {/* Sección de la foto de perfil */}
-              <div className="d-flex flex-column align-items-center mb-4">
-                <div
-                  className="position-relative d-flex justify-content-center align-items-center bg-light rounded-circle"
-                  style={{ width: '128px', height: '128px', overflow: 'hidden' }}
-                >
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar de perfil"
-                      className="img-fluid rounded-circle"
-                      style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                    />
-                  ) : (
-                    <div
-                      className="bg-secondary bg-opacity-25 text-dark d-flex align-items-center justify-content-center fw-bold rounded-circle"
-                      style={{ width: '128px', height: '128px', fontSize: '3rem' }}
-                    >
-                      {formData.name ? formData.name.charAt(0).toUpperCase() : 'N/A'}
-                    </div>
-                  )}
-                  <label
-                    htmlFor="avatarInput"
-                    className="position-absolute bottom-0 end-0 p-2 bg-primary rounded-circle text-white shadow-sm"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <FaCamera />
-                  </label>
-                  <input
-                    type="file"
-                    id="avatarInput"
-                    name="avatar"
-                    className="d-none"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                  />
-                </div>
-              </div>
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+    );
+  }
 
-              {/* Campos del formulario */}
-              <div className="mb-3">
-                <label htmlFor="name" className="form-label fw-semibold">Nombre</label>
-                <input
-                  type="text"
-                  className="form-control rounded-pill"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="bio" className="form-label fw-semibold">Biografía</label>
-                <textarea
-                  className="form-control rounded-3"
-                  id="bio"
-                  name="bio"
-                  rows="3"
-                  value={formData.bio}
-                  onChange={handleChange}
-                  required
-                ></textarea>
-              </div>
-              <div className="d-flex justify-content-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/profile/${user.id}`)}
-                  className="btn btn-outline-secondary rounded-pill px-4"
+  if (error) {
+    return <div className="text-center mt-5"><h1 className="text-danger">{error}</h1></div>;
+  }
+
+  return (
+    <div className="container py-5">
+      <div className="card shadow-lg border-0 rounded-4">
+        <div className="card-body p-4 p-md-5">
+          <h1 className="display-4 fw-bold text-center mb-4">Editar Perfil</h1>
+          {success && <div className="alert alert-success text-center">{success}</div>}
+          {error && <div className="alert alert-danger text-center">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            {/* Sección de Avatar */}
+            <div className="text-center mb-4">
+              <div className="position-relative d-inline-block">
+                {user.avatar ? (
+                  <img
+                    src={`http://localhost:5000/uploads/${user.avatar}`}
+                    alt="Avatar de perfil"
+                    className="rounded-circle"
+                    style={{ width: '120px', height: '120px', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <FaUserCircle style={{ fontSize: '6rem', color: '#ccc' }} />
+                )}
+                <label
+                  htmlFor="avatar-upload"
+                  className="btn btn-secondary rounded-circle position-absolute bottom-0 end-0"
+                  style={{ transform: 'translate(25%, 25%)' }}
                 >
-                  <FaArrowLeft className="me-1" /> Volver
-                </button>
-                <button type="submit" className="btn btn-primary rounded-pill px-4">
-                  <FaSave className="me-1" /> Guardar Cambios
-                </button>
+                  <FaCamera />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="d-none"
+                  />
+                </label>
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* Campos del Formulario */}
+            <div className="mb-3">
+              <label htmlFor="name" className="form-label">Nombre</label>
+              <input
+                type="text"
+                className="form-control"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="bio" className="form-label">Biografía</label>
+              <textarea
+                className="form-control"
+                id="bio"
+                name="bio"
+                rows="3"
+                value={formData.bio}
+                onChange={handleChange}
+              ></textarea>
+            </div>
+            <div className="mb-3">
+              <label htmlFor="skills_to_offer" className="form-label">Habilidades que ofreces (separadas por coma)</label>
+              <input
+                type="text"
+                className="form-control"
+                id="skills_to_offer"
+                name="skills_to_offer"
+                value={formData.skills_to_offer}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="mb-4">
+              <label htmlFor="skills_to_learn" className="form-label">Habilidades que quieres aprender (separadas por coma)</label>
+              <input
+                type="text"
+                className="form-control"
+                id="skills_to_learn"
+                name="skills_to_learn"
+                value={formData.skills_to_learn}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="d-grid gap-2">
+              <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
+                <FaSave className="me-2" /> Guardar Cambios
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
 };
 
-export default EditProfilePage;
+export default EditProfile;

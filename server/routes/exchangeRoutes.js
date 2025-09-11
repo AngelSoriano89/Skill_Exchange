@@ -1,61 +1,49 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const {
-  createExchangeRequest,
-  getReceivedExchanges,
-  getSentExchanges,
-  getAcceptedExchanges,
-  getCompletedExchanges,
-  acceptExchange,
-  rejectExchange,
+const { 
+  createExchangeRequest, 
+  getMyExchanges,
+  getPendingRequests,
+  acceptExchangeRequest,
+  rejectExchangeRequest,
   completeExchange,
-  getMyExchanges
+  getExchangeById
 } = require('../controllers/exchangeController');
+const auth = require('../middleware/auth');
 
 // @route   POST api/exchanges/request
 // @desc    Crear una solicitud de intercambio
 // @access  Private
 router.post('/request', auth, createExchangeRequest);
 
-// @route   GET api/exchanges/received
-// @desc    Obtener solicitudes de intercambio recibidas
+// @route   GET api/exchanges/my-requests
+// @desc    Obtener todas las solicitudes de intercambio del usuario (enviadas y recibidas)
 // @access  Private
-router.get('/received', auth, getReceivedExchanges);
+router.get('/my-requests', auth, getMyExchanges);
 
-// @route   GET api/exchanges/sent
-// @desc    Obtener solicitudes de intercambio enviadas
+// @route   GET api/exchanges/pending
+// @desc    Obtener solicitudes de intercambio pendientes para el usuario actual
 // @access  Private
-router.get('/sent', auth, getSentExchanges);
+router.get('/pending', auth, getPendingRequests);
 
-// @route   GET api/exchanges/accepted
-// @desc    Obtener intercambios aceptados
-// @access  Private
-router.get('/accepted', auth, getAcceptedExchanges);
-
-// @route   GET api/exchanges/completed
-// @desc    Obtener intercambios completados
-// @access  Private
-router.get('/completed', auth, getCompletedExchanges);
-
-// @route   POST api/exchanges/accept/:id
+// @route   PUT api/exchanges/accept/:id
 // @desc    Aceptar una solicitud de intercambio
 // @access  Private
-router.post('/accept/:id', auth, acceptExchange);
+router.put('/accept/:id', auth, acceptExchangeRequest);
 
-// @route   POST api/exchanges/reject/:id
+// @route   PUT api/exchanges/reject/:id
 // @desc    Rechazar una solicitud de intercambio
 // @access  Private
-router.post('/reject/:id', auth, rejectExchange);
+router.put('/reject/:id', auth, rejectExchangeRequest);
 
 // @route   PUT api/exchanges/complete/:id
 // @desc    Marcar un intercambio como completado
 // @access  Private
 router.put('/complete/:id', auth, completeExchange);
 
-// @route   GET api/exchanges/my-requests
-// @desc    Obtener solicitudes de intercambio
+// @route   GET api/exchanges/:id
+// @desc    Obtener un intercambio específico por ID
 // @access  Private
-router.get('/my-requests', auth, getMyExchanges);
+router.get('/:id', auth, getExchangeById);
 
 module.exports = router;

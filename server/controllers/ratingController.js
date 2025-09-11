@@ -1,10 +1,10 @@
-const Rating = require('../models/Rating');
-const User = require('../models/User');
+import Rating from'../models/Rating.js';
+import User from'../models/User.js';
 
 // @route   POST /api/ratings
 // @desc    Calificar un intercambio
 // @access  Private
-exports.rateExchange = async (req, res) => {
+export const rateExchange = async (req, res) => {
   const { exchangeId, rating, comment } = req.body;
   
   try {
@@ -34,7 +34,7 @@ exports.rateExchange = async (req, res) => {
 // @route   GET /api/ratings/:userId
 // @desc    Obtener las calificaciones de un usuario
 // @access  Public
-exports.getUserRatings = async (req, res) => {
+export const getUserRatings = async (req, res) => {
   try {
     const ratings = await Rating.find({ recipient: req.params.userId }).populate('rater', 'name');
     res.json(ratings);

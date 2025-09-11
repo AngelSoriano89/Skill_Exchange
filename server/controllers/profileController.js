@@ -1,9 +1,9 @@
 // controllers/profileController.js
-
-const User = require('../models/User');
+import User from'../models/User.js';
+import Exchange from'../models/Exchange.js';
 
 // Obtener un perfil por ID
-exports.getProfileById = async (req, res) => {
+export const getProfileById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -17,16 +17,27 @@ exports.getProfileById = async (req, res) => {
 };
 
 // Actualizar el perfil del usuario autenticado
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
+  if (req.params.id !== req.user.id) {
+    return res.status(401).json({ msg: 'No autorizado para actualizar este perfil' });
+  }
+
   const { name, bio, skills_to_offer, skills_to_learn } = req.body;
   const profileFields = {};
   if (name) profileFields.name = name;
   if (bio) profileFields.bio = bio;
-  if (skills_to_offer) profileFields.skills_to_offer = skills_to_offer;
-  if (skills_to_learn) profileFields.skills_to_learn = skills_to_learn;
+  
+  // Convertir las cadenas de habilidades en arrays y limpiarlas
+  if (skills_to_offer) {
+    profileFields.skills_to_offer = skills_to_offer.split(',').map(skill => skill.trim());
+  }
+  if (skills_to_learn) {
+    profileFields.skills_to_learn = skills_to_learn.split(',').map(skill => skill.trim());
+  }
 
+  // Guardar el nombre del archivo del avatar subido
   if (req.file) {
-    profileFields.avatar = req.file.path;
+    profileFields.avatar = req.file.filename;
   }
 
   try {
@@ -35,11 +46,13 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({ msg: 'Usuario no encontrado' });
     }
 
+    // Actualizar el usuario y devolver el objeto sin el password
     user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: profileFields },
-      { new: true }
-    );
+      { new: true, runValidators: true } // 'runValidators' asegura que se apliquen las validaciones del modelo
+    ).select('-password');
+
     res.json(user);
   } catch (err) {
     console.error(err.message);
@@ -48,7 +61,7 @@ exports.updateProfile = async (req, res) => {
 };
 
 // Añadir una nueva habilidad
-exports.addSkill = async (req, res) => {
+export const addSkill = async (req, res) => {
   // 1. Desestructurar las propiedades del cuerpo de la solicitud
   const { skill, type } = req.body;
 
@@ -78,6 +91,39 @@ exports.addSkill = async (req, res) => {
 
     await user.save();
     return res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
+
+// @desc    Obtener información de contacto de un usuario para un intercambio aceptado
+// @route   GET /api/profile/:id/contact
+// @access  Private
+export const getContactInfo = async (req, res) => {
+  try {
+    const userToContact = await User.findById(req.params.id).select('name email phone');
+
+    if (!userToContact) {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
+
+    // Verificar si existe un intercambio aceptado entre los dos usuarios
+    const acceptedExchange = await Exchange.findOne({
+      $or: [
+        { requester: req.user.id, recipient: userToContact._id, status: 'accepted' },
+        { requester: userToContact._id, recipient: req.user.id, status: 'accepted' },
+      ],
+    });
+
+    if (!acceptedExchange) {
+      return res.status(403).json({ msg: 'Acceso denegado. El intercambio debe ser aceptado para ver el contacto.' });
+    }
+
+    res.json({
+      user: userToContact,
+      exchangeId: acceptedExchange._id
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Error del servidor');

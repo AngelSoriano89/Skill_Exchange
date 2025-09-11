@@ -1,29 +1,18 @@
-import React, { useContext } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, AuthContext } from './context/AuthContext';
+import React from 'react';
+import './App.css';
 import Header from './components/Common/Header';
-import Footer from './components/Common/Footer';
 import LandingPage from './pages/Auth/LandingPage';
+import Footer from "./components/Common/Footer";
+import { AuthProvider } from './context/AuthContext';
+import { Routes, Route } from 'react-router-dom';
 import RegisterPage from './pages/Auth/RegisterPage';
 import LoginPage from './pages/Auth/LoginPage';
-import DashboardPage from './pages/App/Dashboard'; 
-import UserProfilePage from './pages/App/ProfilePage'; 
-import SearchPage from './pages/App/SearchPage'; 
-import NotFound from './pages/Exchange/NotFound'; 
-import EditProfilePage from './pages/profile/EditProfile';
-import AddSkillPage from './pages/profile/AddSkill'; 
-import UserContactPage from "./pages/Exchange/UserContacPage"
+import Dashboard from './pages/App/Dashboard';
+import ProfilePage from './pages/App/ProfilePage';
+import SearchPage from './pages/App/SearchPage';
+import UserContactPage from './pages/Exchange/UserContactPage';
+import ProtectedRoute from './components/Common/ProtectedRoute';
 
-// Componente para proteger las rutas
-const PrivateRoute = ({ children }) => {
-  const { user, loading } = useContext(AuthContext);
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-  return user ? children : <Navigate to="/login" />;
-};
-
-// Componente principal de la aplicación
 const App = () => {
   return (
     <AuthProvider>
@@ -31,64 +20,51 @@ const App = () => {
         <Header />
         <main className="flex-grow-1">
           <Routes>
-            {/* Rutas Públicas */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
-
-            {/* Rutas Privadas */}
-            <Route
-              path="/dashboard"
+            <Route 
+              path="/dashboard" 
               element={
-                <PrivateRoute>
-                  <DashboardPage />
-                </PrivateRoute>
-              }
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
             />
-            {/* Se corrige la ruta para que acepte un parámetro de ID de usuario */}
-            <Route
+            {/* Ruta para perfil propio (sin ID) */}
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Ruta para perfil de otros usuarios (con ID) */}
+            <Route 
               path="/profile/:id" 
               element={
-                <PrivateRoute>
-                  <UserProfilePage />
-                </PrivateRoute>
-              }
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              } 
             />
-            <Route
-              path="/search"
+            <Route 
+              path="/search" 
               element={
-                <PrivateRoute>
+                <ProtectedRoute>
                   <SearchPage />
-                </PrivateRoute>
-              }
+                </ProtectedRoute>
+              } 
             />
-            <Route
-              path="/profile/edit"
+            <Route 
+              path="/exchange/:exchangeId/contact" 
               element={
-                <PrivateRoute>
-                  <EditProfilePage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/skills/add"
-              element={
-                <PrivateRoute>
-                  <AddSkillPage />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/contact/:exchangeId"
-              element={
-                <PrivateRoute>
+                <ProtectedRoute>
                   <UserContactPage />
-                </PrivateRoute>
-              }
+                </ProtectedRoute>
+              } 
             />
-            
-            {/* Ruta para páginas no encontradas */}
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />

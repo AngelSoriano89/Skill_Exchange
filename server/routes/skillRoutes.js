@@ -1,5 +1,3 @@
-// routes/skillRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const { addSkill } = require('../controllers/skillController');
