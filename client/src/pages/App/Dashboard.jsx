@@ -37,7 +37,7 @@ const Dashboard = () => {
     setActionLoading(true);
     try {
       await api.put(`/exchanges/accept/${requestId}`);
-      await fetchDashboardData(); // Recargar datos
+      await fetchDashboardData();
       setSelectedRequest(null);
     } catch (error) {
       console.error('Error accepting request:', error);
@@ -51,7 +51,7 @@ const Dashboard = () => {
     setActionLoading(true);
     try {
       await api.put(`/exchanges/reject/${requestId}`);
-      await fetchDashboardData(); // Recargar datos
+      await fetchDashboardData();
       setSelectedRequest(null);
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -62,15 +62,20 @@ const Dashboard = () => {
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      'pending': { class: 'bg-warning text-dark', text: 'Pendiente' },
-      'accepted': { class: 'bg-success', text: 'Aceptado' },
-      'rejected': { class: 'bg-danger', text: 'Rechazado' },
-      'completed': { class: 'bg-info', text: 'Completado' }
+    const statusMap = {
+      'pending': 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium',
+      'accepted': 'bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium',
+      'rejected': 'bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium',
+      'completed': 'bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium'
     };
     
-    const config = statusConfig[status] || { class: 'bg-secondary', text: status };
-    return <span className={`badge ${config.class}`}>{config.text}</span>;
+    const className = statusMap[status] || 'bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium';
+    const text = status === 'pending' ? 'Pendiente' : 
+                 status === 'accepted' ? 'Aceptado' : 
+                 status === 'rejected' ? 'Rechazado' : 
+                 status === 'completed' ? 'Completado' : status;
+    
+    return <span className={className}>{text}</span>;
   };
 
   const formatDate = (dateString) => {
@@ -83,211 +88,308 @@ const Dashboard = () => {
     });
   };
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:5000${avatarPath}`;
+  };
+
+  const renderAvatar = (userData, sizeClasses = 'w-10 h-10') => {
+    if (!userData) return null;
+    
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
+    
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${userData.name}`}
+          className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.nextElementSibling;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      );
+    }
+    
+    return (
+      <div className={`${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
+        {userData.name?.charAt(0).toUpperCase() || 'U'}
+      </div>
+    );
+  };
+
+  const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
+    if (!userData) return null;
+    
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
+    
+    return (
+      <div className="relative">
+        {avatarUrl && (
+          <img
+            src={avatarUrl}
+            alt={`Avatar de ${userData.name}`}
+            className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        )}
+        <div 
+          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
+        >
+          {userData.name?.charAt(0).toUpperCase() || 'U'}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Cargando dashboard...</span>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Filtrar intercambios por estado
   const acceptedExchanges = myExchanges.filter(ex => ex.status === 'accepted');
   const completedExchanges = myExchanges.filter(ex => ex.status === 'completed');
   const sentRequests = myExchanges.filter(ex => ex.sender._id === user._id && ex.status === 'pending');
 
   return (
-    <div className="container-fluid p-4 bg-light min-vh-100">
-      <div className="row">
-        <div className="col-12 mb-4">
-          <div className="d-flex justify-content-between align-items-center">
-            <h1 className="h2 mb-0 text-dark">
-              ¡Bienvenido de vuelta, <span className="text-primary">{user?.name}</span>! 👋
-            </h1>
-            <Link to="/search" className="btn btn-primary rounded-pill px-4">
-              <i className="fas fa-search me-2"></i>
-              Buscar Intercambios
-            </Link>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="container mx-auto px-4">
+        {/* Header del Dashboard */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                ¡Bienvenido de vuelta, 
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> {user?.name?.split(' ')[0]}</span>! 👋
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Aquí tienes un resumen de tu actividad reciente en Skill Exchange
+              </p>
+            </div>
+            <div className="mt-4 md:mt-0">
+              <Link 
+                to="/search" 
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 inline-flex items-center"
+              >
+                <i className="fas fa-search mr-2"></i>
+                Buscar Intercambios
+              </Link>
+            </div>
           </div>
-          <p className="text-muted mb-0">Aquí tienes un resumen de tu actividad reciente</p>
         </div>
-      </div>
 
-      {/* Cards de estadísticas rápidas */}
-      <div className="row mb-4">
-        <div className="col-md-3 mb-3">
-          <div className="card bg-primary text-white h-100">
-            <div className="card-body text-center">
-              <h3 className="card-title">{pendingRequests.length}</h3>
-              <p className="card-text">Solicitudes Pendientes</p>
+        {/* Cards de estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-red-500 to-pink-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-3xl font-bold">{pendingRequests.length}</h3>
+                <p className="text-red-100 font-medium">Solicitudes Pendientes</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <i className="fas fa-inbox text-2xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-500 to-emerald-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-3xl font-bold">{acceptedExchanges.length}</h3>
+                <p className="text-green-100 font-medium">Intercambios Activos</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <i className="fas fa-handshake text-2xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-3xl font-bold">{completedExchanges.length}</h3>
+                <p className="text-blue-100 font-medium">Completados</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <i className="fas fa-check-circle text-2xl"></i>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-500 to-orange-500 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-3xl font-bold">{sentRequests.length}</h3>
+                <p className="text-yellow-100 font-medium">Enviadas</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <i className="fas fa-paper-plane text-2xl"></i>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-3 mb-3">
-          <div className="card bg-success text-white h-100">
-            <div className="card-body text-center">
-              <h3 className="card-title">{acceptedExchanges.length}</h3>
-              <p className="card-text">Intercambios Activos</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3 mb-3">
-          <div className="card bg-info text-white h-100">
-            <div className="card-body text-center">
-              <h3 className="card-title">{completedExchanges.length}</h3>
-              <p className="card-text">Completados</p>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3 mb-3">
-          <div className="card bg-warning text-dark h-100">
-            <div className="card-body text-center">
-              <h3 className="card-title">{sentRequests.length}</h3>
-              <p className="card-text">Enviadas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="row">
-        {/* Solicitudes Recibidas */}
-        <div className="col-lg-6 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header bg-white border-bottom">
-              <h5 className="mb-0 d-flex align-items-center">
-                <i className="fas fa-inbox text-primary me-2"></i>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Solicitudes Recibidas */}
+          <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                <i className="fas fa-inbox text-blue-600 mr-3"></i>
                 Solicitudes Recibidas ({pendingRequests.length})
-              </h5>
+              </h2>
             </div>
-            <div className="card-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+            <div className="p-6 max-h-96 overflow-y-auto">
               {pendingRequests.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="fas fa-inbox text-muted" style={{ fontSize: '3rem' }}></i>
-                  <p className="text-muted mt-3 mb-0">No tienes solicitudes pendientes</p>
-                  <small className="text-muted">Las nuevas solicitudes aparecerán aquí</small>
+                <div className="text-center py-12">
+                  <i className="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
+                  <h3 className="text-lg font-semibold text-gray-500 mb-2">No tienes solicitudes pendientes</h3>
+                  <p className="text-gray-400 text-sm">Las nuevas solicitudes aparecerán aquí</p>
                 </div>
               ) : (
-                pendingRequests.map((request) => (
-                  <div key={request._id} className="border rounded p-3 mb-3 bg-light">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div className="flex-grow-1">
-                        <div className="d-flex align-items-center mb-2">
-                          <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
-                               style={{ width: '32px', height: '32px', fontSize: '14px', fontWeight: 'bold' }}>
-                            {request.sender.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <h6 className="mb-0 fw-bold">{request.sender.name}</h6>
-                            <small className="text-muted">{formatDate(request.date)}</small>
-                          </div>
+                <div className="space-y-4">
+                  {pendingRequests.map((request) => (
+                    <div key={request._id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          {renderAvatarWithFallback(request.sender)}
                         </div>
                         
-                        <p className="small text-dark mb-2">
-                          <strong>Mensaje:</strong> {request.message}
-                        </p>
-                        
-                        <div className="mb-2">
-                          <div className="small mb-1">
-                            <strong>Ofrece:</strong>
-                            <div>
-                              {request.skills_to_offer.map((skill, index) => (
-                                <span key={index} className="badge bg-primary me-1">{skill}</span>
-                              ))}
-                            </div>
+                        <div className="flex-grow min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-gray-900">{request.sender.name}</h4>
+                            <span className="text-xs text-gray-500">{formatDate(request.date)}</span>
                           </div>
-                          <div className="small">
-                            <strong>Quiere aprender:</strong>
+                          
+                          <p className="text-gray-700 text-sm mb-3 line-clamp-2">{request.message}</p>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                             <div>
-                              {request.skills_to_learn.map((skill, index) => (
-                                <span key={index} className="badge bg-success me-1">{skill}</span>
-                              ))}
+                              <p className="text-xs font-medium text-green-700 mb-1">Ofrece:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {request.skills_to_offer.slice(0, 2).map((skill, index) => (
+                                  <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{skill}</span>
+                                ))}
+                                {request.skills_to_offer.length > 2 && (
+                                  <span className="text-xs text-gray-500">+{request.skills_to_offer.length - 2}</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button 
-                        className="btn btn-outline-primary btn-sm"
-                        onClick={() => setSelectedRequest(request)}
-                        disabled={actionLoading}
-                      >
-                        Ver más
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Mis Intercambios */}
-        <div className="col-lg-6 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header bg-white border-bottom">
-              <h5 className="mb-0 d-flex align-items-center">
-                <i className="fas fa-exchange-alt text-success me-2"></i>
-                Mis Intercambios
-              </h5>
-            </div>
-            <div className="card-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              {myExchanges.length === 0 ? (
-                <div className="text-center py-4">
-                  <i className="fas fa-handshake text-muted" style={{ fontSize: '3rem' }}></i>
-                  <p className="text-muted mt-3 mb-0">No tienes intercambios aún</p>
-                  <Link to="/search" className="btn btn-primary btn-sm mt-2">
-                    Buscar personas para intercambiar
-                  </Link>
-                </div>
-              ) : (
-                myExchanges.map((exchange) => {
-                  const isReceived = exchange.recipient._id === user._id;
-                  const otherUser = isReceived ? exchange.sender : exchange.recipient;
-                  
-                  return (
-                    <div key={exchange._id} className="border rounded p-3 mb-3">
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div className="flex-grow-1">
-                          <div className="d-flex align-items-center mb-2">
-                            <div className="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                 style={{ width: '32px', height: '32px', fontSize: '14px', fontWeight: 'bold' }}>
-                              {otherUser.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-grow-1">
-                              <h6 className="mb-0">
-                                {isReceived ? 'Solicitud de' : 'Enviado a'} {otherUser.name}
-                              </h6>
-                              <div className="d-flex align-items-center">
-                                <small className="text-muted me-2">{formatDate(exchange.date)}</small>
-                                {getStatusBadge(exchange.status)}
+                            <div>
+                              <p className="text-xs font-medium text-blue-700 mb-1">Quiere:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {request.skills_to_learn.slice(0, 2).map((skill, index) => (
+                                  <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">{skill}</span>
+                                ))}
+                                {request.skills_to_learn.length > 2 && (
+                                  <span className="text-xs text-gray-500">+{request.skills_to_learn.length - 2}</span>
+                                )}
                               </div>
                             </div>
                           </div>
                           
-                          <div className="small">
-                            <div className="mb-1">
-                              <strong>Ofrece:</strong> {exchange.skills_to_offer.join(', ')}
+                          <button 
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                            onClick={() => setSelectedRequest(request)}
+                          >
+                            Ver detalles completos →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mis Intercambios */}
+          <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                <i className="fas fa-exchange-alt text-green-600 mr-3"></i>
+                Mis Intercambios
+              </h2>
+            </div>
+            <div className="p-6 max-h-96 overflow-y-auto">
+              {myExchanges.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-handshake text-gray-300 text-5xl mb-4"></i>
+                  <h3 className="text-lg font-semibold text-gray-500 mb-2">No tienes intercambios aún</h3>
+                  <p className="text-gray-400 text-sm mb-4">¡Comienza buscando personas increíbles!</p>
+                  <Link 
+                    to="/search" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center"
+                  >
+                    <i className="fas fa-search mr-2"></i>
+                    Buscar personas
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myExchanges.slice(0, 5).map((exchange) => {
+                    const isReceived = exchange.recipient._id === user._id;
+                    const otherUser = isReceived ? exchange.sender : exchange.recipient;
+                    
+                    return (
+                      <div key={exchange._id} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            {renderAvatarWithFallback(otherUser)}
+                          </div>
+                          
+                          <div className="flex-grow min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-gray-900">
+                                {isReceived ? 'Solicitud de' : 'Enviado a'} {otherUser.name}
+                              </h4>
+                              {getStatusBadge(exchange.status)}
                             </div>
-                            <div>
-                              <strong>Quiere:</strong> {exchange.skills_to_learn.join(', ')}
+                            
+                            <div className="text-sm text-gray-600 mb-2">
+                              <span className="font-medium">Ofrece:</span> {exchange.skills_to_offer.join(', ')}
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              <span className="font-medium">Quiere:</span> {exchange.skills_to_learn.join(', ')}
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-500">{formatDate(exchange.date)}</span>
+                              {exchange.status === 'accepted' && (
+                                <Link 
+                                  to={`/exchange/${exchange._id}/contact`}
+                                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700 transition-colors"
+                                >
+                                  Contactar
+                                </Link>
+                              )}
                             </div>
                           </div>
                         </div>
-                        
-                        {exchange.status === 'accepted' && (
-                          <Link 
-                            to={`/exchange/${exchange._id}/contact`}
-                            className="btn btn-success btn-sm"
-                          >
-                            Contactar
-                          </Link>
-                        )}
                       </div>
+                    );
+                  })}
+                  
+                  {myExchanges.length > 5 && (
+                    <div className="text-center">
+                      <p className="text-sm text-gray-500">
+                        Y {myExchanges.length - 5} intercambio{myExchanges.length - 5 !== 1 ? 's' : ''} más...
+                      </p>
                     </div>
-                  );
-                })
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -296,100 +398,117 @@ const Dashboard = () => {
 
       {/* Modal para ver solicitud completa */}
       {selectedRequest && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-user-circle text-primary me-2"></i>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 bg-blue-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                  <i className="fas fa-user-circle text-blue-600 mr-2"></i>
                   Solicitud de {selectedRequest.sender.name}
-                </h5>
+                </h3>
                 <button 
-                  type="button" 
-                  className="btn-close"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={() => setSelectedRequest(null)}
                   disabled={actionLoading}
-                ></button>
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
               </div>
-              <div className="modal-body">
-                <div className="row">
-                  <div className="col-md-8">
-                    <div className="mb-3">
-                      <strong className="text-primary">📝 Mensaje:</strong>
-                      <p className="mt-1 p-3 bg-light rounded">{selectedRequest.message}</p>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <strong className="text-success">🎯 Habilidades que ofrece:</strong>
-                      <div className="mt-2">
-                        {selectedRequest.skills_to_offer.map((skill, index) => (
-                          <span key={index} className="badge bg-primary me-2 mb-1 p-2">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <strong className="text-info">📚 Quiere aprender:</strong>
-                      <div className="mt-2">
-                        {selectedRequest.skills_to_learn.map((skill, index) => (
-                          <span key={index} className="badge bg-success me-2 mb-1 p-2">{skill}</span>
-                        ))}
-                      </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-blue-700 mb-3 flex items-center">
+                      <i className="fas fa-comment mr-2"></i>
+                      Mensaje
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 leading-relaxed">{selectedRequest.message}</p>
                     </div>
                   </div>
                   
-                  <div className="col-md-4">
-                    <div className="text-center">
-                      <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                           style={{ width: '80px', height: '80px', fontSize: '2rem', fontWeight: 'bold' }}>
-                        {selectedRequest.sender.name.charAt(0).toUpperCase()}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold text-green-700 mb-3 flex items-center">
+                        <i className="fas fa-hand-holding mr-2"></i>
+                        Ofrece
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedRequest.skills_to_offer.map((skill, index) => (
+                          <span key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium block w-fit">{skill}</span>
+                        ))}
                       </div>
-                      <h5>{selectedRequest.sender.name}</h5>
-                      <p className="text-muted small">{selectedRequest.sender.email}</p>
-                      
-                      <Link 
-                        to={`/profile/${selectedRequest.sender._id}`}
-                        className="btn btn-outline-info btn-sm w-100 mb-2"
-                        target="_blank"
-                      >
-                        <i className="fas fa-user me-2"></i>
-                        Ver Perfil Completo
-                      </Link>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold text-blue-700 mb-3 flex items-center">
+                        <i className="fas fa-graduation-cap mr-2"></i>
+                        Quiere aprender
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedRequest.skills_to_learn.map((skill, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium block w-fit">{skill}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
+                
+                <div className="text-center">
+                  <div className="mb-4">
+                    {renderAvatarWithFallback(selectedRequest.sender, 'w-20 h-20')}
+                  </div>
+                  <h5 className="font-bold text-gray-900 mb-2">{selectedRequest.sender.name}</h5>
+                  <p className="text-gray-600 text-sm mb-4">{selectedRequest.sender.email}</p>
+                  
+                  <Link 
+                    to={`/profile/${selectedRequest.sender._id}`}
+                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm w-full mb-4 inline-block"
+                    target="_blank"
+                  >
+                    <i className="fas fa-user mr-2"></i>
+                    Ver Perfil Completo
+                  </Link>
+                  
+                  <div className="text-xs text-gray-500">
+                    <i className="fas fa-clock mr-1"></i>
+                    {formatDate(selectedRequest.date)}
+                  </div>
+                </div>
               </div>
-              <div className="modal-footer">
+            </div>
+            
+            <div className="p-6 border-t border-gray-100 bg-gray-50">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button 
-                  type="button" 
-                  className="btn btn-success"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex-1"
                   onClick={() => handleAcceptRequest(selectedRequest._id)}
                   disabled={actionLoading}
                 >
                   {actionLoading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
                       Procesando...
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-check me-2"></i>
+                      <i className="fas fa-check mr-2"></i>
                       Aceptar Intercambio
                     </>
                   )}
                 </button>
                 <button 
-                  type="button" 
-                  className="btn btn-danger"
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex-1"
                   onClick={() => handleRejectRequest(selectedRequest._id)}
                   disabled={actionLoading}
                 >
-                  <i className="fas fa-times me-2"></i>
+                  <i className="fas fa-times mr-2"></i>
                   Rechazar
                 </button>
                 <button 
-                  type="button" 
-                  className="btn btn-secondary"
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   onClick={() => setSelectedRequest(null)}
                   disabled={actionLoading}
                 >

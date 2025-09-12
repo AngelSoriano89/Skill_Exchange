@@ -17,7 +17,6 @@ const ProfilePage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [exchanges, setExchanges] = useState([]);
 
-  // Si no hay ID en la URL, mostrar perfil del usuario actual
   const profileId = id || currentUser?._id;
   const isOwnProfile = currentUser && profileId === currentUser._id;
 
@@ -36,11 +35,9 @@ const ProfilePage = () => {
       let userData;
       
       if (isOwnProfile) {
-        // Si es el perfil propio, obtener datos actualizados
         const response = await api.get('/users/me');
         userData = response.data;
       } else {
-        // Si es perfil de otro usuario
         const response = await api.get(`/users/${profileId}`);
         userData = response.data;
       }
@@ -82,24 +79,54 @@ const ProfilePage = () => {
   const handleProfileUpdated = (updatedUser) => {
     setProfileUser(updatedUser);
     setShowEditModal(false);
-    // Actualizar también el contexto si es el perfil propio
     if (isOwnProfile && updateUser) {
       updateUser(updatedUser);
     }
   };
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:5000${avatarPath}`;
+  };
+
+  const renderAvatar = () => {
+    const avatarUrl = profileUser.avatar ? getAvatarUrl(profileUser.avatar) : null;
+    
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${profileUser.name}`}
+          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.nextElementSibling;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      );
+    }
+    
+    return (
+      <div className="w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
+        {profileUser.name.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
+
   const getExchangeStatusBadge = (status) => {
     const statusConfig = {
-      'pending': { class: 'bg-warning text-dark', text: 'Pendiente', icon: 'fas fa-clock' },
-      'accepted': { class: 'bg-success', text: 'Aceptado', icon: 'fas fa-check' },
-      'rejected': { class: 'bg-danger', text: 'Rechazado', icon: 'fas fa-times' },
-      'completed': { class: 'bg-info', text: 'Completado', icon: 'fas fa-check-circle' }
+      'pending': { class: 'badge-warning', text: 'Pendiente', icon: 'fas fa-clock' },
+      'accepted': { class: 'badge-success', text: 'Aceptado', icon: 'fas fa-check' },
+      'rejected': { class: 'badge-danger', text: 'Rechazado', icon: 'fas fa-times' },
+      'completed': { class: 'badge-info', text: 'Completado', icon: 'fas fa-check-circle' }
     };
     
-    const config = statusConfig[status] || { class: 'bg-secondary', text: status, icon: 'fas fa-question' };
+    const config = statusConfig[status] || { class: 'bg-gray-100 text-gray-800', text: status, icon: 'fas fa-question' };
     return (
-      <span className={`badge ${config.class} d-inline-flex align-items-center`}>
-        <i className={`${config.icon} me-1`}></i>
+      <span className={`${config.class} inline-flex items-center`}>
+        <i className={`${config.icon} mr-1`}></i>
         {config.text}
       </span>
     );
@@ -113,39 +140,12 @@ const ProfilePage = () => {
     });
   };
 
-  const renderAvatar = () => {
-    if (profileUser.avatar) {
-      return (
-        <img
-          src={profileUser.avatar}
-          alt={`Avatar de ${profileUser.name}`}
-          className="rounded-circle object-fit-cover"
-          style={{ width: '120px', height: '120px' }}
-          onError={(e) => {
-            // Si la imagen falla al cargar, mostrar avatar con inicial
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-           style={{ width: '120px', height: '120px', fontSize: '3rem', fontWeight: 'bold' }}>
-        {profileUser.name.charAt(0).toUpperCase()}
-      </div>
-    );
-  };
-
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Cargando perfil...</span>
-          </div>
-          <p className="text-muted">Cargando perfil de usuario...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando perfil de usuario...</p>
         </div>
       </div>
     );
@@ -153,18 +153,19 @@ const ProfilePage = () => {
 
   if (error || !profileUser) {
     return (
-      <div className="container mt-5">
-        <div className="row justify-content-center">
-          <div className="col-md-6">
-            <div className="alert alert-danger text-center" role="alert">
-              <i className="fas fa-exclamation-triangle fa-2x mb-3"></i>
-              <h4>Perfil no encontrado</h4>
-              <p>{error || 'El usuario que buscas no existe o no tienes permisos para verlo.'}</p>
-              <button className="btn btn-primary" onClick={() => navigate(isOwnProfile ? '/dashboard' : '/search')}>
-                <i className="fas fa-arrow-left me-2"></i>
-                {isOwnProfile ? 'Volver al Dashboard' : 'Volver a la búsqueda'}
-              </button>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="card p-8 text-center">
+            <i className="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Perfil no encontrado</h2>
+            <p className="text-gray-600 mb-6">{error || 'El usuario que buscas no existe o no tienes permisos para verlo.'}</p>
+            <button 
+              className="btn-primary w-full"
+              onClick={() => navigate(isOwnProfile ? '/dashboard' : '/search')}
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              {isOwnProfile ? 'Volver al Dashboard' : 'Volver a la búsqueda'}
+            </button>
           </div>
         </div>
       </div>
@@ -172,257 +173,252 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="bg-light min-vh-100 py-4">
-      <div className="container">
-        <div className="row">
-          {/* Información principal del perfil */}
-          <div className="col-lg-8 mb-4">
-            <div className="card shadow-sm border-0">
-              <div className="card-body p-4">
-                {/* Header del perfil */}
-                <div className="row align-items-center mb-4">
-                  <div className="col-auto text-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Columna Principal */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Header del Perfil */}
+              <div className="card p-8 animate-fade-in-up">
+                <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
+                  <div className="flex-shrink-0 text-center">
                     {renderAvatar()}
-                    <div style={{ display: 'none' }} className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                         style={{ width: '120px', height: '120px', fontSize: '3rem', fontWeight: 'bold' }}>
+                    <div style={{ display: 'none' }} className="w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
                       {profileUser.name.charAt(0).toUpperCase()}
                     </div>
-                  </div>
-                  <div className="col">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div>
-                        <h1 className="h2 mb-2 text-dark fw-bold">
-                          {profileUser.name}
-                          {isOwnProfile && (
-                            <span className="badge bg-primary ms-2 fs-6">Tu perfil</span>
-                          )}
-                        </h1>
-                        <p className="text-muted mb-2">
-                          <i className="fas fa-envelope me-2"></i>
-                          {profileUser.email}
-                        </p>
-                        {profileUser.phone && (
-                          <p className="text-muted mb-2">
-                            <i className="fas fa-phone me-2"></i>
-                            {profileUser.phone}
-                          </p>
-                        )}
-                        {profileUser.location && (
-                          <p className="text-muted mb-2">
-                            <i className="fas fa-map-marker-alt me-2"></i>
-                            {profileUser.location}
-                          </p>
-                        )}
-                        {profileUser.bio && (
-                          <div className="mt-3 p-3 bg-light rounded">
-                            <h6 className="fw-bold mb-2">
-                              <i className="fas fa-quote-left me-2 text-primary"></i>
-                              Sobre mí
-                            </h6>
-                            <p className="text-secondary mb-0 fst-italic">
-                              {profileUser.bio}
-                            </p>
-                          </div>
-                        )}
-                        <p className="text-muted small mt-3 mb-0">
-                          <i className="fas fa-calendar me-2"></i>
-                          Miembro desde {formatDate(profileUser.date)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Información adicional */}
-                {(profileUser.experience || profileUser.interests || profileUser.languages) && (
-                  <div className="row mb-4">
-                    {profileUser.experience && (
-                      <div className="col-md-4 mb-3">
-                        <div className="border rounded p-3 h-100 bg-warning bg-opacity-10">
-                          <h6 className="text-warning fw-bold mb-2">
-                            <i className="fas fa-star me-2"></i>
-                            Nivel de Experiencia
-                          </h6>
-                          <span className="badge bg-warning text-dark px-3 py-2">
-                            {profileUser.experience}
-                          </span>
-                        </div>
-                      </div>
+                    {isOwnProfile && (
+                      <button
+                        onClick={handleEditProfile}
+                        className="mt-4 btn-outline-primary text-sm px-4 py-2"
+                      >
+                        <i className="fas fa-camera mr-2"></i>
+                        Cambiar foto
+                      </button>
                     )}
-                    
-                    {profileUser.languages && profileUser.languages.length > 0 && (
-                      <div className="col-md-4 mb-3">
-                        <div className="border rounded p-3 h-100 bg-primary bg-opacity-10">
-                          <h6 className="text-primary fw-bold mb-2">
-                            <i className="fas fa-language me-2"></i>
-                            Idiomas
-                          </h6>
-                          <div className="d-flex flex-wrap gap-1">
-                            {profileUser.languages.map((language, index) => (
-                              <span key={index} className="badge bg-primary rounded-pill px-2 py-1">
-                                {language}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {profileUser.interests && profileUser.interests.length > 0 && (
-                      <div className="col-md-4 mb-3">
-                        <div className="border rounded p-3 h-100 bg-secondary bg-opacity-10">
-                          <h6 className="text-secondary fw-bold mb-2">
-                            <i className="fas fa-heart me-2"></i>
-                            Intereses
-                          </h6>
-                          <div className="d-flex flex-wrap gap-1">
-                            {profileUser.interests.slice(0, 3).map((interest, index) => (
-                              <span key={index} className="badge bg-secondary rounded-pill px-2 py-1">
-                                {interest}
-                              </span>
-                            ))}
-                            {profileUser.interests.length > 3 && (
-                              <span className="badge bg-secondary rounded-pill px-2 py-1">
-                                +{profileUser.interests.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Habilidades */}
-                <div className="row">
-                  <div className="col-md-6 mb-4">
-                    <div className="border rounded p-3 h-100 bg-success bg-opacity-10">
-                      <h5 className="text-success fw-bold mb-3">
-                        <i className="fas fa-hand-holding me-2"></i>
-                        Habilidades que ofrece
-                      </h5>
-                      {profileUser.skills_to_offer && profileUser.skills_to_offer.length > 0 ? (
-                        <div className="d-flex flex-wrap gap-2">
-                          {profileUser.skills_to_offer.map((skill, index) => (
-                            <span key={index} className="badge bg-success rounded-pill px-3 py-2">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted fst-italic mb-0">
-                          No ha especificado habilidades que ofrece
-                        </p>
-                      )}
-                    </div>
                   </div>
                   
-                  <div className="col-md-6 mb-4">
-                    <div className="border rounded p-3 h-100 bg-info bg-opacity-10">
-                      <h5 className="text-info fw-bold mb-3">
-                        <i className="fas fa-graduation-cap me-2"></i>
-                        Quiere aprender
-                      </h5>
-                      {profileUser.skills_to_learn && profileUser.skills_to_learn.length > 0 ? (
-                        <div className="d-flex flex-wrap gap-2">
-                          {profileUser.skills_to_learn.map((skill, index) => (
-                            <span key={index} className="badge bg-info rounded-pill px-3 py-2">
-                              {skill}
-                            </span>
-                          ))}
+                  <div className="flex-grow text-center md:text-left">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                      <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                          {profileUser.name}
+                          {isOwnProfile && (
+                            <span className="ml-3 badge-primary text-sm">Tu perfil</span>
+                          )}
+                        </h1>
+                        <div className="space-y-1 text-gray-600">
+                          <p className="flex items-center justify-center md:justify-start">
+                            <i className="fas fa-envelope mr-2 text-primary-600"></i>
+                            {profileUser.email}
+                          </p>
+                          {profileUser.phone && (
+                            <p className="flex items-center justify-center md:justify-start">
+                              <i className="fas fa-phone mr-2 text-green-600"></i>
+                              {profileUser.phone}
+                            </p>
+                          )}
+                          {profileUser.location && (
+                            <p className="flex items-center justify-center md:justify-start">
+                              <i className="fas fa-map-marker-alt mr-2 text-red-600"></i>
+                              {profileUser.location}
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-muted fst-italic mb-0">
-                          No ha especificado habilidades que quiere aprender
-                        </p>
+                      </div>
+                    </div>
+                    
+                    {profileUser.bio && (
+                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                          <i className="fas fa-quote-left mr-2 text-primary-600"></i>
+                          Sobre mí
+                        </h3>
+                        <p className="text-gray-700 italic leading-relaxed">{profileUser.bio}</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-gray-500">
+                      <span className="flex items-center">
+                        <i className="fas fa-calendar mr-1"></i>
+                        Miembro desde {formatDate(profileUser.date)}
+                      </span>
+                      {profileUser.experience && (
+                        <span className="badge-warning">
+                          <i className="fas fa-star mr-1"></i>
+                          {profileUser.experience}
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Sidebar con acciones */}
-          <div className="col-lg-4">
-            {/* Acciones */}
-            <div className="card shadow-sm border-0 mb-4">
-              <div className="card-body">
-                <h6 className="card-title fw-bold mb-3">
-                  <i className="fas fa-cog me-2"></i>
-                  Acciones
-                </h6>
+              {/* Información Adicional */}
+              {(profileUser.languages?.length > 0 || profileUser.interests?.length > 0) && (
+                <div className="card p-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Información adicional</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {profileUser.languages?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-blue-700 mb-3 flex items-center">
+                          <i className="fas fa-language mr-2"></i>
+                          Idiomas
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {profileUser.languages.map((language, index) => (
+                            <span key={index} className="badge-primary">
+                              {language}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {profileUser.interests?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-purple-700 mb-3 flex items-center">
+                          <i className="fas fa-heart mr-2"></i>
+                          Intereses
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {profileUser.interests.slice(0, 6).map((interest, index) => (
+                            <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              {interest}
+                            </span>
+                          ))}
+                          {profileUser.interests.length > 6 && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              +{profileUser.interests.length - 6} más
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Habilidades */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Habilidades que ofrece */}
+                <div className="card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-l-4 border-green-500 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                  <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
+                    <i className="fas fa-hand-holding mr-2"></i>
+                    Enseña
+                  </h3>
+                  {profileUser.skills_to_offer?.length > 0 ? (
+                    <div className="space-y-2">
+                      {profileUser.skills_to_offer.map((skill, index) => (
+                        <span key={index} className="badge-success mr-2 mb-2">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No ha especificado habilidades que ofrece</p>
+                  )}
+                </div>
                 
-                <div className="d-grid gap-2">
+                {/* Habilidades que quiere aprender */}
+                <div className="card p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                  <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
+                    <i className="fas fa-graduation-cap mr-2"></i>
+                    Quiere aprender
+                  </h3>
+                  {profileUser.skills_to_learn?.length > 0 ? (
+                    <div className="space-y-2">
+                      {profileUser.skills_to_learn.map((skill, index) => (
+                        <span key={index} className="badge-info mr-2 mb-2">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No ha especificado habilidades que quiere aprender</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Acciones */}
+              <div className="card p-6 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                  <i className="fas fa-cog mr-2"></i>
+                  Acciones
+                </h3>
+                
+                <div className="space-y-3">
                   {isOwnProfile ? (
                     <>
                       <button 
-                        className="btn btn-primary"
+                        className="btn-primary w-full"
                         onClick={handleEditProfile}
                       >
-                        <i className="fas fa-edit me-2"></i>
+                        <i className="fas fa-edit mr-2"></i>
                         Editar Perfil
                       </button>
                       <button 
-                        className="btn btn-outline-secondary"
+                        className="btn-secondary w-full"
                         onClick={() => navigate('/dashboard')}
                       >
-                        <i className="fas fa-tachometer-alt me-2"></i>
+                        <i className="fas fa-tachometer-alt mr-2"></i>
                         Ir al Dashboard
                       </button>
                       <button 
-                        className="btn btn-outline-info"
+                        className="btn-outline-primary w-full"
                         onClick={() => navigate('/search')}
                       >
-                        <i className="fas fa-search me-2"></i>
+                        <i className="fas fa-search mr-2"></i>
                         Buscar Intercambios
                       </button>
                     </>
                   ) : (
                     <>
                       <button 
-                        className="btn btn-primary"
+                        className="btn-primary w-full"
                         onClick={handleSendRequest}
                       >
-                        <i className="fas fa-paper-plane me-2"></i>
-                        Enviar Solicitud de Intercambio
+                        <i className="fas fa-paper-plane mr-2"></i>
+                        Enviar Solicitud
                       </button>
                       <button 
-                        className="btn btn-outline-secondary"
+                        className="btn-outline-primary w-full"
                         onClick={() => navigate('/search')}
                       >
-                        <i className="fas fa-arrow-left me-2"></i>
+                        <i className="fas fa-arrow-left mr-2"></i>
                         Volver a la búsqueda
                       </button>
                     </>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Historial de intercambios (solo si hay y no es perfil propio) */}
-            {exchanges.length > 0 && !isOwnProfile && (
-              <div className="card shadow-sm border-0">
-                <div className="card-body">
-                  <h6 className="card-title fw-bold mb-3">
-                    <i className="fas fa-history me-2"></i>
-                    Historial de Intercambios
-                  </h6>
+              {/* Historial de intercambios */}
+              {exchanges.length > 0 && !isOwnProfile && (
+                <div className="card p-6 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <i className="fas fa-history mr-2"></i>
+                    Historial
+                  </h3>
                   
-                  <div className="list-group list-group-flush">
+                  <div className="space-y-3">
                     {exchanges.slice(0, 3).map((exchange) => {
                       const isReceived = exchange.recipient._id === currentUser._id;
                       return (
-                        <div key={exchange._id} className="list-group-item px-0 py-2 border-0">
-                          <div className="d-flex justify-content-between align-items-center">
+                        <div key={exchange._id} className="border-l-4 border-gray-200 pl-4 py-2">
+                          <div className="flex justify-between items-start">
                             <div>
-                              <small className="text-muted d-block">
-                                {isReceived ? 'Recibida' : 'Enviada'} - {formatDate(exchange.date)}
-                              </small>
-                              <div className="mt-1">
-                                {getExchangeStatusBadge(exchange.status)}
-                              </div>
+                              <p className="text-sm text-gray-600">
+                                {isReceived ? 'Recibida' : 'Enviada'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatDate(exchange.date)}
+                              </p>
                             </div>
+                            {getExchangeStatusBadge(exchange.status)}
                           </div>
                         </div>
                       );
@@ -430,15 +426,13 @@ const ProfilePage = () => {
                   </div>
                   
                   {exchanges.length > 3 && (
-                    <div className="text-center mt-2">
-                      <small className="text-muted">
-                        Y {exchanges.length - 3} intercambio{exchanges.length - 3 !== 1 ? 's' : ''} más...
-                      </small>
-                    </div>
+                    <p className="text-center text-sm text-gray-500 mt-3">
+                      Y {exchanges.length - 3} intercambio{exchanges.length - 3 !== 1 ? 's' : ''} más...
+                    </p>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

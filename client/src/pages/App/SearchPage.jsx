@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import UserCard from '../../components/User/UserCard';
 import api from '../../api/api';
@@ -12,7 +11,7 @@ const SearchPage = () => {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
-  const [searchType, setSearchType] = useState('all'); // 'all', 'skills_offered', 'skills_wanted'
+  const [searchType, setSearchType] = useState('all');
 
   useEffect(() => {
     fetchUsers();
@@ -20,7 +19,6 @@ const SearchPage = () => {
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      // Si no hay término de búsqueda, mostrar todos los usuarios (excepto el usuario actual)
       setFilteredUsers(users.filter(u => u._id !== user?._id));
     } else {
       performSearch();
@@ -31,7 +29,6 @@ const SearchPage = () => {
     try {
       setLoading(true);
       const response = await api.get('/users');
-      // Filtrar para no mostrar al usuario actual
       const allUsers = response.data.filter(u => u._id !== user?._id);
       setUsers(allUsers);
       setFilteredUsers(allUsers);
@@ -50,7 +47,6 @@ const SearchPage = () => {
     let results = [];
 
     if (searchType === 'all' || searchType === 'skills_offered') {
-      // Buscar en habilidades que ofrecen
       const skillsOfferedMatches = users.filter(user => 
         user.skills_to_offer && 
         user.skills_to_offer.some(skill => 
@@ -61,7 +57,6 @@ const SearchPage = () => {
     }
 
     if (searchType === 'all' || searchType === 'skills_wanted') {
-      // Buscar en habilidades que quieren aprender
       const skillsWantedMatches = users.filter(user => 
         user.skills_to_learn && 
         user.skills_to_learn.some(skill => 
@@ -71,15 +66,16 @@ const SearchPage = () => {
       results = [...results, ...skillsWantedMatches];
     }
 
-    // También buscar por nombre
     if (searchType === 'all') {
       const nameMatches = users.filter(user => 
         user.name && user.name.toLowerCase().includes(searchTermLower)
       );
-      results = [...results, ...nameMatches];
+      const bioMatches = users.filter(user => 
+        user.bio && user.bio.toLowerCase().includes(searchTermLower)
+      );
+      results = [...results, ...nameMatches, ...bioMatches];
     }
 
-    // Eliminar duplicados y filtrar el usuario actual
     const uniqueResults = results
       .filter((user, index, self) => 
         index === self.findIndex(u => u._id === user._id)
@@ -103,192 +99,302 @@ const SearchPage = () => {
     setSearchType('all');
   };
 
+  const popularSkills = [
+    'JavaScript', 'Python', 'Cocina', 'Inglés', 'Piano', 'Fotografía', 
+    'Marketing', 'Diseño Gráfico', 'Yoga', 'Guitarra'
+  ];
+
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p className="text-muted">Cargando usuarios...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando usuarios...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid p-4 bg-light min-vh-100">
-      <div className="row">
-        <div className="col-12">
-          {/* Header de búsqueda */}
-          <div className="text-center mb-5">
-            <h1 className="h2 text-dark mb-3">
-              <i className="fas fa-search text-primary me-2"></i>
-              Encuentra tu próximo intercambio
-            </h1>
-            <p className="lead text-muted">
-              Busca personas con las habilidades que quieres aprender o que quieran aprender lo que sabes
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8 animate-fade-in-up">
+          <h1 className="text-4xl font-bold gradient-text mb-4">
+            <i className="fas fa-search mr-3"></i>
+            Encuentra tu próximo intercambio
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Conecta con personas increíbles y aprende habilidades nuevas mientras compartes las tuyas
+          </p>
+        </div>
 
-          {/* Barra de búsqueda */}
-          <div className="row justify-content-center mb-4">
-            <div className="col-lg-8 col-xl-6">
-              <div className="card shadow-sm">
-                <div className="card-body">
-                  <div className="input-group mb-3">
-                    <span className="input-group-text bg-primary text-white">
-                      <i className="fas fa-search"></i>
-                    </span>
-                    <input
-                      type="text"
-                      className="form-control form-control-lg"
-                      placeholder="Buscar por habilidad (ej. Piano, Cocina, Programación, Inglés...)"
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                    />
-                    {searchTerm && (
-                      <button 
-                        className="btn btn-outline-secondary"
-                        type="button"
-                        onClick={clearSearch}
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Filtros de búsqueda */}
-                  <div className="d-flex justify-content-center flex-wrap gap-2">
-                    <button
-                      className={`btn btn-sm ${searchType === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-                      onClick={() => handleSearchTypeChange('all')}
-                    >
-                      <i className="fas fa-globe me-1"></i>
-                      Todo
-                    </button>
-                    <button
-                      className={`btn btn-sm ${searchType === 'skills_offered' ? 'btn-success' : 'btn-outline-success'}`}
-                      onClick={() => handleSearchTypeChange('skills_offered')}
-                    >
-                      <i className="fas fa-hand-holding me-1"></i>
-                      Habilidades Ofrecidas
-                    </button>
-                    <button
-                      className={`btn btn-sm ${searchType === 'skills_wanted' ? 'btn-info' : 'btn-outline-info'}`}
-                      onClick={() => handleSearchTypeChange('skills_wanted')}
-                    >
-                      <i className="fas fa-graduation-cap me-1"></i>
-                      Quieren Aprender
-                    </button>
-                  </div>
-                </div>
+        {/* Barra de búsqueda */}
+        <div className="max-w-4xl mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div className="card p-6">
+            <div className="relative mb-6">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <i className="fas fa-search text-gray-400 text-xl"></i>
               </div>
-            </div>
-          </div>
-
-          {/* Indicador de búsqueda */}
-          {searching && (
-            <div className="text-center mb-4">
-              <div className="spinner-border spinner-border-sm text-primary me-2"></div>
-              <span className="text-muted">Buscando...</span>
-            </div>
-          )}
-
-          {/* Resultados de búsqueda */}
-          <div className="row">
-            <div className="col-12 mb-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 text-dark">
-                  {searchTerm ? (
-                    <>
-                      Resultados para "{searchTerm}" ({filteredUsers.length} {filteredUsers.length === 1 ? 'persona encontrada' : 'personas encontradas'})
-                    </>
-                  ) : (
-                    <>
-                      Todos los usuarios disponibles ({filteredUsers.length})
-                    </>
-                  )}
-                </h5>
-                
-                {searchTerm && (
-                  <small className="text-muted">
-                    <i className="fas fa-filter me-1"></i>
-                    Filtro: {searchType === 'all' ? 'Búsqueda global' : 
-                            searchType === 'skills_offered' ? 'Solo habilidades ofrecidas' : 
-                            'Solo habilidades que quieren aprender'}
-                  </small>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="row justify-content-center">
-              <div className="col-md-6">
-                <div className="alert alert-danger" role="alert">
-                  <i className="fas fa-exclamation-triangle me-2"></i>
-                  {error}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Grid de usuarios */}
-          {filteredUsers.length === 0 && !loading && (
-            <div className="text-center py-5">
-              <div className="mb-4">
-                <i className="fas fa-search text-muted" style={{ fontSize: '4rem' }}></i>
-              </div>
-              <h4 className="text-muted mb-3">
-                {searchTerm ? 'No se encontraron resultados' : 'No hay usuarios disponibles'}
-              </h4>
-              <p className="text-muted mb-4">
-                {searchTerm 
-                  ? `Intenta con otros términos de búsqueda o cambia el filtro`
-                  : 'Parece que aún no hay otros usuarios registrados'
-                }
-              </p>
+              <input
+                type="text"
+                className="block w-full pl-12 pr-12 py-4 text-lg border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                placeholder="Buscar por habilidad (ej. Piano, Cocina, Programación, Inglés...)"
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
               {searchTerm && (
                 <button 
-                  className="btn btn-primary"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                   onClick={clearSearch}
                 >
-                  <i className="fas fa-times me-2"></i>
-                  Limpiar búsqueda
+                  <i className="fas fa-times text-xl"></i>
                 </button>
               )}
             </div>
-          )}
 
-          <div className="row">
-            {filteredUsers.map((userData) => (
-              <div key={userData._id} className="col-xl-3 col-lg-4 col-md-6 mb-4">
-                <UserCard user={userData} />
+            {/* Filtros de búsqueda */}
+            <div className="flex flex-wrap justify-center gap-3 mb-4">
+              <button
+                className={`px-6 py-2 rounded-full font-medium transition-all ${
+                  searchType === 'all' 
+                    ? 'bg-primary-600 text-white shadow-lg' 
+                    : 'bg-white text-gray-600 border border-gray-300 hover:border-primary-300 hover:text-primary-600'
+                }`}
+                onClick={() => handleSearchTypeChange('all')}
+              >
+                <i className="fas fa-globe mr-2"></i>
+                Todo
+              </button>
+              <button
+                className={`px-6 py-2 rounded-full font-medium transition-all ${
+                  searchType === 'skills_offered' 
+                    ? 'bg-green-600 text-white shadow-lg' 
+                    : 'bg-white text-gray-600 border border-gray-300 hover:border-green-300 hover:text-green-600'
+                }`}
+                onClick={() => handleSearchTypeChange('skills_offered')}
+              >
+                <i className="fas fa-hand-holding mr-2"></i>
+                Habilidades Ofrecidas
+              </button>
+              <button
+                className={`px-6 py-2 rounded-full font-medium transition-all ${
+                  searchType === 'skills_wanted' 
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'bg-white text-gray-600 border border-gray-300 hover:border-blue-300 hover:text-blue-600'
+                }`}
+                onClick={() => handleSearchTypeChange('skills_wanted')}
+              >
+                <i className="fas fa-graduation-cap mr-2"></i>
+                Quieren Aprender
+              </button>
+            </div>
+
+            {/* Sugerencias de búsqueda */}
+            {!searchTerm && (
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-3">Habilidades populares:</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {popularSkills.map((skill) => (
+                    <button
+                      key={skill}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-primary-100 hover:text-primary-700 transition-colors"
+                      onClick={() => setSearchTerm(skill)}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
+        </div>
 
-          {/* Sugerencias de búsqueda */}
-          {searchTerm === '' && filteredUsers.length > 0 && (
-            <div className="row justify-content-center mt-5">
-              <div className="col-lg-8">
-                <div className="card bg-primary text-white">
-                  <div className="card-body text-center">
-                    <h5 className="card-title">
-                      <i className="fas fa-lightbulb me-2"></i>
-                      Consejos de búsqueda
-                    </h5>
-                    <p className="card-text mb-0">
-                      Prueba buscar: "JavaScript", "Cocina", "Inglés", "Piano", "Fotografía", "Marketing", etc.
-                    </p>
+        {/* Indicador de búsqueda */}
+        {searching && (
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center text-primary-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600 mr-2"></div>
+              <span className="font-medium">Buscando...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Resultados */}
+        <div className="mb-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 md:mb-0">
+              {searchTerm ? (
+                <>
+                  Resultados para "<span className="text-primary-600">{searchTerm}</span>"
+                </>
+              ) : (
+                'Todos los usuarios disponibles'
+              )}
+            </h2>
+            
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-600">
+                <span className="font-semibold text-primary-600">{filteredUsers.length}</span> 
+                {filteredUsers.length === 1 ? ' persona encontrada' : ' personas encontradas'}
+              </span>
+              
+              {searchTerm && (
+                <div className="flex items-center text-sm text-gray-500">
+                  <i className="fas fa-filter mr-1"></i>
+                  {searchType === 'all' ? 'Búsqueda global' : 
+                   searchType === 'skills_offered' ? 'Solo habilidades ofrecidas' : 
+                   'Solo habilidades que quieren aprender'}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <i className="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
+              <p className="text-red-700 font-medium">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Grid de usuarios */}
+        {filteredUsers.length === 0 && !loading ? (
+          <div className="text-center py-16 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <div className="max-w-lg mx-auto">
+              <div className="mb-6">
+                <i className="fas fa-search text-gray-300 text-6xl mb-4"></i>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  {searchTerm ? 'No se encontraron resultados' : 'No hay usuarios disponibles'}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {searchTerm 
+                    ? 'Intenta con otros términos de búsqueda o cambia el filtro'
+                    : 'Parece que aún no hay otros usuarios registrados'
+                  }
+                </p>
+              </div>
+              
+              {searchTerm ? (
+                <div className="space-y-4">
+                  <button 
+                    className="btn-primary mx-auto"
+                    onClick={clearSearch}
+                  >
+                    <i className="fas fa-times mr-2"></i>
+                    Limpiar búsqueda
+                  </button>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">¿Buscabas algo diferente? Prueba:</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {popularSkills.slice(0, 5).map((skill) => (
+                        <button
+                          key={skill}
+                          className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm hover:bg-primary-200 transition-colors"
+                          onClick={() => setSearchTerm(skill)}
+                        >
+                          {skill}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                </div>
+              ) : (
+                <div className="card p-8">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">¡Sé el primero en intercambiar!</h4>
+                  <p className="text-gray-600 mb-4">
+                    Invita a tus amigos a unirse a Skill Exchange y comienza a intercambiar conocimientos.
+                  </p>
+                  <button className="btn-primary">
+                    <i className="fas fa-share-alt mr-2"></i>
+                    Invitar amigos
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+              {filteredUsers.map((userData, index) => (
+                <div 
+                  key={userData._id} 
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${0.1 * (index % 8)}s` }}
+                >
+                  <UserCard user={userData} />
+                </div>
+              ))}
+            </div>
+
+            {/* Paginación futura */}
+            {filteredUsers.length > 12 && (
+              <div className="text-center">
+                <p className="text-gray-500 mb-4">
+                  Mostrando {Math.min(12, filteredUsers.length)} de {filteredUsers.length} resultados
+                </p>
+                {/* Aquí se podría agregar paginación en el futuro */}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Consejos de búsqueda */}
+        {searchTerm === '' && filteredUsers.length > 0 && (
+          <div className="max-w-4xl mx-auto mt-12 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            <div className="card p-8 text-center bg-gradient-to-r from-primary-50 to-blue-50 border-l-4 border-primary-500">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-center">
+                <i className="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                Consejos para encontrar el intercambio perfecto
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-primary-700">🔍 Sé específico</h4>
+                  <p className="text-sm text-gray-600">
+                    Busca "Guitar acústica" en lugar de solo "Guitarra" para resultados más precisos.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-green-700">🎯 Usa filtros</h4>
+                  <p className="text-sm text-gray-600">
+                    Filtra por "Habilidades Ofrecidas" si buscas un maestro específico.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-blue-700">💬 Lee perfiles</h4>
+                  <p className="text-sm text-gray-600">
+                    Revisa las biografías para encontrar personas con intereses similares.
+                  </p>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* CTA para usuarios sin resultados */}
+        {filteredUsers.length === 0 && searchTerm && (
+          <div className="max-w-2xl mx-auto mt-8 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <div className="card p-8 text-center bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">
+                <i className="fas fa-plus-circle text-yellow-500 mr-2"></i>
+                ¿No encuentras lo que buscas?
+              </h3>
+              <p className="text-gray-600 mb-4">
+                ¡Puedes ser el primero en ofrecer "{searchTerm}"! Actualiza tu perfil y atrae a personas interesadas.
+              </p>
+              <button 
+                className="btn-warning"
+                onClick={() => window.location.href = '/profile'}
+              >
+                <i className="fas fa-edit mr-2"></i>
+                Actualizar mi perfil
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
