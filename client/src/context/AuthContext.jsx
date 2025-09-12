@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
 import api from '../api/api';
-import { handleApiError, showSuccessToast } from '../utils/sweetAlert';
 
 export const AuthContext = createContext({ user: null });
 
@@ -9,23 +8,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-    // Función para cargar los datos del usuario desde el token
-    const loadUser = async () => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            api.defaults.headers.common['x-auth-token'] = token;
-            try {
-                const res = await api.get('/auth/me');
-                setUser(res.data);
-            } catch (err) {
-                localStorage.removeItem('token');
-                delete api.defaults.headers.common['x-auth-token'];
-                setUser(null);
-                console.error('Error al cargar el usuario:', err.message);
-            }
-        }
-        setLoading(false);
-    };
+  useEffect(() => {
+    if (token) {
+      // Verificar token al cargar la app
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const checkAuthStatus = async () => {
     try {
@@ -40,66 +30,73 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-    // Función de registro
-    const register = async (userData) => {
-        try {
-            const res = await api.post('/auth/register', userData);
-            localStorage.setItem('token', res.data.token);
-            await loadUser();
-            showSuccessToast('¡Cuenta creada exitosamente!');
-            return res.data;
-        } catch (err) {
-            handleApiError(err);
-            throw err;
-        }
-    };
+  const login = async (email, password) => {
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      const { token } = res.data;
+      
+      localStorage.setItem('token', token);
+      setToken(token);
+      
+      // Obtener datos del usuario después del login
+      const userRes = await api.get('/users/me');
+      setUser(userRes.data);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.msg || 'Error al iniciar sesión' 
+      };
+    }
+  };
 
-    // Función de login
-    const login = async (email, password) => {
-        try {
-            const res = await api.post('/auth/login', { email, password });
-            localStorage.setItem('token', res.data.token);
-            await loadUser();
-            showSuccessToast('¡Bienvenido de vuelta!');
-            return res.data;
-        } catch (err) {
-            handleApiError(err);
-            throw err;
-        }
-    };
+  const register = async (userData) => {
+    try {
+      const res = await api.post('/auth/register', userData);
+      const { token } = res.data;
+      
+      localStorage.setItem('token', token);
+      setToken(token);
+      
+      // Obtener datos del usuario después del registro
+      const userRes = await api.get('/users/me');
+      setUser(userRes.data);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Register error:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.msg || 'Error al registrarse' 
+      };
+    }
+  };
 
-    // Función de logout
-    const logout = () => {
-        localStorage.removeItem('token');
-        delete api.defaults.headers.common['x-auth-token'];
-        setUser(null);
-        showSuccessToast('Sesión cerrada correctamente');
-    };
+  const updateUser = (updatedUserData) => {
+    setUser(updatedUserData);
+  };
 
-    // Función para actualizar el perfil del usuario
-    const updateProfile = async (profileData) => {
-        try {
-            const res = await api.put('/profile', profileData);
-            setUser(res.data);
-            showSuccessToast('Perfil actualizado exitosamente');
-            return res.data;
-        } catch (err) {
-            handleApiError(err);
-            throw err;
-        }
-    };
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+  };
 
-    return (
-        <AuthContext.Provider value={{ 
-            user, 
-            loading, 
-            register, 
-            login, 
-            logout, 
-            updateProfile,
-            loadUser 
-        }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateUser,
+    isAuthenticated: !!user
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

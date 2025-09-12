@@ -1,329 +1,292 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FaSearch, FaFilter, FaMapMarkerAlt, FaStar, FaEye, FaExchangeAlt, FaTimes, FaSpinner } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import skillService from '../../services/skillService';
-import { handleApiError, showInfoAlert } from '../../utils/sweetAlert';
-import SkillCard from '../../components/Skill/SkillCard';
+import UserCard from '../../components/User/UserCard';
+import api from '../../api/api';
 
 const SearchPage = () => {
   const { user } = useContext(AuthContext);
-  const [skills, setSkills] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [pagination, setPagination] = useState({ current: 1, pages: 1, total: 0 });
-  
-  // Filtros
-  const [filters, setFilters] = useState({
-    search: '',
-    category: '',
-    level: '',
-    city: '',
-    country: '',
-    page: 1,
-    limit: 12
-  });
-  
-  const [showFilters, setShowFilters] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState('');
+  const [searchType, setSearchType] = useState('all'); // 'all', 'skills_offered', 'skills_wanted'
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [categoriesData, skillsData] = await Promise.all([
-          skillService.getCategories(),
-          skillService.getSkills({ page: 1, limit: 12 })
-        ]);
-        
-        setCategories(categoriesData);
-        setSkills(skillsData.skills);
-        setPagination(skillsData.pagination);
-      } catch (error) {
-        handleApiError(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchInitialData();
+    fetchUsers();
   }, []);
 
-  const handleSearch = async (newFilters = filters) => {
-    setSearchLoading(true);
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      // Si no hay término de búsqueda, mostrar todos los usuarios (excepto el usuario actual)
+      setFilteredUsers(users.filter(u => u._id !== user?._id));
+    } else {
+      performSearch();
+    }
+  }, [searchTerm, users, searchType, user]);
+
+  const fetchUsers = async () => {
     try {
-      const skillsData = await skillService.getSkills(newFilters);
-      setSkills(skillsData.skills);
-      setPagination(skillsData.pagination);
-    } catch (error) {
-      handleApiError(error);
+      setLoading(true);
+      const response = await api.get('/users');
+      // Filtrar para no mostrar al usuario actual
+      const allUsers = response.data.filter(u => u._id !== user?._id);
+      setUsers(allUsers);
+      setFilteredUsers(allUsers);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Error al cargar los usuarios');
     } finally {
-      setSearchLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value, page: 1 };
-    setFilters(newFilters);
+  const performSearch = () => {
+    setSearching(true);
+    
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    let results = [];
+
+    if (searchType === 'all' || searchType === 'skills_offered') {
+      // Buscar en habilidades que ofrecen
+      const skillsOfferedMatches = users.filter(user => 
+        user.skills_to_offer && 
+        user.skills_to_offer.some(skill => 
+          skill.toLowerCase().includes(searchTermLower)
+        )
+      );
+      results = [...results, ...skillsOfferedMatches];
+    }
+
+    if (searchType === 'all' || searchType === 'skills_wanted') {
+      // Buscar en habilidades que quieren aprender
+      const skillsWantedMatches = users.filter(user => 
+        user.skills_to_learn && 
+        user.skills_to_learn.some(skill => 
+          skill.toLowerCase().includes(searchTermLower)
+        )
+      );
+      results = [...results, ...skillsWantedMatches];
+    }
+
+    // También buscar por nombre
+    if (searchType === 'all') {
+      const nameMatches = users.filter(user => 
+        user.name && user.name.toLowerCase().includes(searchTermLower)
+      );
+      results = [...results, ...nameMatches];
+    }
+
+    // Eliminar duplicados y filtrar el usuario actual
+    const uniqueResults = results
+      .filter((user, index, self) => 
+        index === self.findIndex(u => u._id === user._id)
+      )
+      .filter(u => u._id !== user?._id);
+
+    setFilteredUsers(uniqueResults);
+    setSearching(false);
   };
 
-  const handlePageChange = (page) => {
-    const newFilters = { ...filters, page };
-    setFilters(newFilters);
-    handleSearch(newFilters);
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
   };
 
-  const clearFilters = () => {
-    const clearedFilters = {
-      search: '',
-      category: '',
-      level: '',
-      city: '',
-      country: '',
-      page: 1,
-      limit: 12
-    };
-    setFilters(clearedFilters);
-    handleSearch(clearedFilters);
+  const handleSearchTypeChange = (type) => {
+    setSearchType(type);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setSearchType('all');
   };
 
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
         <div className="text-center">
-          <FaSpinner className="fa-spin text-primary mb-3" size={48} />
-          <p className="text-muted">Cargando habilidades...</p>
+          <div className="spinner-border text-primary mb-3" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="text-muted">Cargando usuarios...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-light min-vh-100">
-      <div className="container py-4">
-        {/* Header */}
-        <div className="text-center mb-5">
-          <h1 className="h2 fw-bold text-dark mb-2">
-            <FaSearch className="text-primary me-2" />
-            Explora Habilidades
-          </h1>
-          <p className="text-muted">Encuentra la habilidad perfecta para intercambiar</p>
-        </div>
-
-        {/* Barra de búsqueda principal */}
-        <div className="row justify-content-center mb-4">
-          <div className="col-12 col-md-8 col-lg-6">
-            <div className="card shadow-sm border-0">
-              <div className="card-body p-3">
-                <div className="input-group">
-                  <span className="input-group-text bg-white border-end-0">
-                    <FaSearch className="text-muted" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Buscar habilidades... (ej: React, Guitarra, Cocina)"
-                    className="form-control border-start-0 border-end-0"
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  />
-                  <button 
-                    onClick={() => handleSearch()} 
-                    className="btn btn-primary"
-                    disabled={searchLoading}
-                  >
-                    {searchLoading ? <FaSpinner className="fa-spin" /> : 'Buscar'}
-                  </button>
-                </div>
-              </div>
-            </div>
+    <div className="container-fluid p-4 bg-light min-vh-100">
+      <div className="row">
+        <div className="col-12">
+          {/* Header de búsqueda */}
+          <div className="text-center mb-5">
+            <h1 className="h2 text-dark mb-3">
+              <i className="fas fa-search text-primary me-2"></i>
+              Encuentra tu próximo intercambio
+            </h1>
+            <p className="lead text-muted">
+              Busca personas con las habilidades que quieres aprender o que quieran aprender lo que sabes
+            </p>
           </div>
-        </div>
 
-        {/* Filtros avanzados */}
-        <div className="row justify-content-center mb-4">
-          <div className="col-12 col-lg-10">
-            <div className="card border-0 shadow-sm">
-              <div className="card-header bg-white border-bottom-0">
-                <button
-                  className="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center"
-                  onClick={() => setShowFilters(!showFilters)}
-                >
-                  <FaFilter className="me-2" />
-                  {showFilters ? 'Ocultar' : 'Mostrar'} Filtros Avanzados
-                </button>
-              </div>
-              
-              {showFilters && (
+          {/* Barra de búsqueda */}
+          <div className="row justify-content-center mb-4">
+            <div className="col-lg-8 col-xl-6">
+              <div className="card shadow-sm">
                 <div className="card-body">
-                  <div className="row g-3">
-                    <div className="col-md-3">
-                      <label className="form-label small fw-semibold">Categoría</label>
-                      <select
-                        className="form-select form-select-sm"
-                        value={filters.category}
-                        onChange={(e) => handleFilterChange('category', e.target.value)}
+                  <div className="input-group mb-3">
+                    <span className="input-group-text bg-primary text-white">
+                      <i className="fas fa-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control form-control-lg"
+                      placeholder="Buscar por habilidad (ej. Piano, Cocina, Programación, Inglés...)"
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                    />
+                    {searchTerm && (
+                      <button 
+                        className="btn btn-outline-secondary"
+                        type="button"
+                        onClick={clearSearch}
                       >
-                        <option value="">Todas las categorías</option>
-                        {categories.map(category => (
-                          <option key={category} value={category}>{category}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="col-md-3">
-                      <label className="form-label small fw-semibold">Nivel</label>
-                      <select
-                        className="form-select form-select-sm"
-                        value={filters.level}
-                        onChange={(e) => handleFilterChange('level', e.target.value)}
-                      >
-                        <option value="">Todos los niveles</option>
-                        <option value="Principiante">Principiante</option>
-                        <option value="Intermedio">Intermedio</option>
-                        <option value="Avanzado">Avanzado</option>
-                        <option value="Experto">Experto</option>
-                      </select>
-                    </div>
-                    
-                    <div className="col-md-3">
-                      <label className="form-label small fw-semibold">Ciudad</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Ciudad"
-                        value={filters.city}
-                        onChange={(e) => handleFilterChange('city', e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="col-md-3">
-                      <label className="form-label small fw-semibold">País</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="País"
-                        value={filters.country}
-                        onChange={(e) => handleFilterChange('country', e.target.value)}
-                      />
-                    </div>
+                        <i className="fas fa-times"></i>
+                      </button>
+                    )}
                   </div>
-                  
-                  <div className="d-flex gap-2 mt-3">
+
+                  {/* Filtros de búsqueda */}
+                  <div className="d-flex justify-content-center flex-wrap gap-2">
                     <button
-                      onClick={() => handleSearch()}
-                      className="btn btn-primary btn-sm"
-                      disabled={searchLoading}
+                      className={`btn btn-sm ${searchType === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => handleSearchTypeChange('all')}
                     >
-                      <FaSearch className="me-1" />
-                      Aplicar Filtros
+                      <i className="fas fa-globe me-1"></i>
+                      Todo
                     </button>
                     <button
-                      onClick={clearFilters}
-                      className="btn btn-outline-secondary btn-sm"
+                      className={`btn btn-sm ${searchType === 'skills_offered' ? 'btn-success' : 'btn-outline-success'}`}
+                      onClick={() => handleSearchTypeChange('skills_offered')}
                     >
-                      <FaTimes className="me-1" />
-                      Limpiar Filtros
+                      <i className="fas fa-hand-holding me-1"></i>
+                      Habilidades Ofrecidas
+                    </button>
+                    <button
+                      className={`btn btn-sm ${searchType === 'skills_wanted' ? 'btn-info' : 'btn-outline-info'}`}
+                      onClick={() => handleSearchTypeChange('skills_wanted')}
+                    >
+                      <i className="fas fa-graduation-cap me-1"></i>
+                      Quieren Aprender
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Resultados */}
-        <div className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="fw-semibold mb-0">
-              {pagination.total > 0 ? (
-                `${pagination.total} habilidad${pagination.total !== 1 ? 'es' : ''} encontrada${pagination.total !== 1 ? 's' : ''}`
-              ) : (
-                'No se encontraron habilidades'
-              )}
-            </h5>
-            {pagination.total > 0 && (
-              <small className="text-muted">
-                Página {pagination.current} de {pagination.pages}
-              </small>
-            )}
-          </div>
-
-          {searchLoading ? (
-            <div className="text-center py-5">
-              <FaSpinner className="fa-spin text-primary mb-3" size={32} />
-              <p className="text-muted">Buscando habilidades...</p>
+          {/* Indicador de búsqueda */}
+          {searching && (
+            <div className="text-center mb-4">
+              <div className="spinner-border spinner-border-sm text-primary me-2"></div>
+              <span className="text-muted">Buscando...</span>
             </div>
-          ) : (
-            <>
-              {skills.length > 0 ? (
-                <>
-                  <div className="row g-4">
-                    {skills.map((skill) => (
-                      <div key={skill._id} className="col-12 col-md-6 col-lg-4">
-                        <SkillCard skill={skill} />
-                      </div>
-                    ))}
-                  </div>
+          )}
 
-                  {/* Paginación */}
-                  {pagination.pages > 1 && (
-                    <div className="d-flex justify-content-center mt-5">
-                      <nav aria-label="Paginación de resultados">
-                        <ul className="pagination">
-                          <li className={`page-item ${pagination.current === 1 ? 'disabled' : ''}`}>
-                            <button
-                              className="page-link"
-                              onClick={() => handlePageChange(pagination.current - 1)}
-                              disabled={pagination.current === 1}
-                            >
-                              Anterior
-                            </button>
-                          </li>
-                          
-                          {[...Array(Math.min(pagination.pages, 5))].map((_, index) => {
-                            const pageNumber = index + 1;
-                            return (
-                              <li key={pageNumber} className={`page-item ${pagination.current === pageNumber ? 'active' : ''}`}>
-                                <button
-                                  className="page-link"
-                                  onClick={() => handlePageChange(pageNumber)}
-                                >
-                                  {pageNumber}
-                                </button>
-                              </li>
-                            );
-                          })}
-                          
-                          <li className={`page-item ${pagination.current === pagination.pages ? 'disabled' : ''}`}>
-                            <button
-                              className="page-link"
-                              onClick={() => handlePageChange(pagination.current + 1)}
-                              disabled={pagination.current === pagination.pages}
-                            >
-                              Siguiente
-                            </button>
-                          </li>
-                        </ul>
-                      </nav>
-                    </div>
+          {/* Resultados de búsqueda */}
+          <div className="row">
+            <div className="col-12 mb-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0 text-dark">
+                  {searchTerm ? (
+                    <>
+                      Resultados para "{searchTerm}" ({filteredUsers.length} {filteredUsers.length === 1 ? 'persona encontrada' : 'personas encontradas'})
+                    </>
+                  ) : (
+                    <>
+                      Todos los usuarios disponibles ({filteredUsers.length})
+                    </>
                   )}
-                </>
-              ) : (
-                <div className="text-center py-5">
-                  <FaSearch className="text-muted mb-3" size={48} />
-                  <h5 className="text-muted mb-3">No se encontraron habilidades</h5>
-                  <p className="text-muted mb-4">
-                    Intenta ajustar tus filtros de búsqueda o explora todas las categorías
-                  </p>
-                  <button
-                    onClick={clearFilters}
-                    className="btn btn-outline-primary"
-                  >
-                    <FaTimes className="me-2" />
-                    Limpiar Filtros
-                  </button>
+                </h5>
+                
+                {searchTerm && (
+                  <small className="text-muted">
+                    <i className="fas fa-filter me-1"></i>
+                    Filtro: {searchType === 'all' ? 'Búsqueda global' : 
+                            searchType === 'skills_offered' ? 'Solo habilidades ofrecidas' : 
+                            'Solo habilidades que quieren aprender'}
+                  </small>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="row justify-content-center">
+              <div className="col-md-6">
+                <div className="alert alert-danger" role="alert">
+                  <i className="fas fa-exclamation-triangle me-2"></i>
+                  {error}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Grid de usuarios */}
+          {filteredUsers.length === 0 && !loading && (
+            <div className="text-center py-5">
+              <div className="mb-4">
+                <i className="fas fa-search text-muted" style={{ fontSize: '4rem' }}></i>
+              </div>
+              <h4 className="text-muted mb-3">
+                {searchTerm ? 'No se encontraron resultados' : 'No hay usuarios disponibles'}
+              </h4>
+              <p className="text-muted mb-4">
+                {searchTerm 
+                  ? `Intenta con otros términos de búsqueda o cambia el filtro`
+                  : 'Parece que aún no hay otros usuarios registrados'
+                }
+              </p>
+              {searchTerm && (
+                <button 
+                  className="btn btn-primary"
+                  onClick={clearSearch}
+                >
+                  <i className="fas fa-times me-2"></i>
+                  Limpiar búsqueda
+                </button>
               )}
-            </>
+            </div>
+          )}
+
+          <div className="row">
+            {filteredUsers.map((userData) => (
+              <div key={userData._id} className="col-xl-3 col-lg-4 col-md-6 mb-4">
+                <UserCard user={userData} />
+              </div>
+            ))}
+          </div>
+
+          {/* Sugerencias de búsqueda */}
+          {searchTerm === '' && filteredUsers.length > 0 && (
+            <div className="row justify-content-center mt-5">
+              <div className="col-lg-8">
+                <div className="card bg-primary text-white">
+                  <div className="card-body text-center">
+                    <h5 className="card-title">
+                      <i className="fas fa-lightbulb me-2"></i>
+                      Consejos de búsqueda
+                    </h5>
+                    <p className="card-text mb-0">
+                      Prueba buscar: "JavaScript", "Cocina", "Inglés", "Piano", "Fotografía", "Marketing", etc.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

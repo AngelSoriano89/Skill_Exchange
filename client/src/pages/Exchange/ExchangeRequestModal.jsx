@@ -1,48 +1,80 @@
-import React, { useState } from 'react';
-import { FaTimes, FaEnvelope, FaUser, FaStar } from 'react-icons/fa';
-import exchangeService from '../../services/exchangeService';
-import { handleApiError, showSuccessAlert, showLoadingAlert, closeLoadingAlert } from '../../utils/sweetAlert';
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import api from '../../api/api';
 
-const ExchangeRequestModal = ({ onClose, recipientId, recipientName, skillTitle }) => {
+const ExchangeRequestModal = ({ onClose, recipient }) => {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  
   const [formData, setFormData] = useState({
     message: '',
     skills_to_offer: '',
     skills_to_learn: ''
   });
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Limpiar error cuando el usuario escriba
+    if (error) setError('');
+  };
+
+  const validateForm = () => {
+    if (!formData.message.trim()) {
+      setError('Por favor escribe un mensaje personalizado');
+      return false;
+    }
+    if (!formData.skills_to_offer.trim()) {
+      setError('Especifica qué habilidades puedes ofrecer');
+      return false;
+    }
+    if (!formData.skills_to_learn.trim()) {
+      setError('Especifica qué habilidades quieres aprender');
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return;
-    
-    setIsLoading(true);
-    showLoadingAlert('Enviando solicitud...', 'Procesando tu solicitud de intercambio');
-    
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      const skills_to_offer_array = formData.skills_to_offer.split(',').map(skill => skill.trim()).filter(Boolean);
-      const skills_to_learn_array = formData.skills_to_learn.split(',').map(skill => skill.trim()).filter(Boolean);
-      
-      await exchangeService.createExchangeRequest({
-        recipientId,
-        skills_to_offer: skills_to_offer_array,
-        skills_to_learn: skills_to_learn_array,
-        message: formData.message
-      });
-      
-      closeLoadingAlert();
-      showSuccessAlert('¡Solicitud enviada!', 'Se ha notificado al usuario sobre tu interés.');
-      onClose();
-    } catch (error) {
-      closeLoadingAlert();
-      handleApiError(error);
+      const requestData = {
+        recipientId: recipient._id,
+        skills_to_offer: formData.skills_to_offer.split(',').map(s => s.trim()).filter(s => s),
+        skills_to_learn: formData.skills_to_learn.split(',').map(s => s.trim()).filter(s => s),
+        message: formData.message.trim(),
+      };
+
+      await api.post('/exchanges/request', requestData);
+      setSuccess(true);
+    } catch (err) {
+      console.error('Error sending exchange request:', err);
+      setError(err.response?.data?.msg || 'Error al enviar la solicitud. Intenta de nuevo.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (success) {
+      navigate('/dashboard');
+    } else {
+      onClose();
     }
   };
 

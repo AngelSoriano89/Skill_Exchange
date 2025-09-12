@@ -1,8 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import { FaUserPlus, FaEye, FaEyeSlash, FaInfoCircle } from 'react-icons/fa';
-import { showLoadingAlert, closeLoadingAlert } from '../../utils/sweetAlert';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import api from '../../api/api';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -16,77 +14,88 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { register } = useContext(AuthContext);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    bio: '',
-    phone: '',
-    skillsToOffer: '',
-    skillsToLearn: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Limpiar error cuando el usuario empiece a escribir
+    if (error) setError('');
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
-    if (isLoading) return;
-    
-    setIsLoading(true);
-    showLoadingAlert('Creando cuenta...', 'Configurando tu perfil');
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setError('El nombre es obligatorio');
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError('El email es obligatorio');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return false;
+    }
+    return true;
+  };
 
-    const skills_to_offer_array = formData.skillsToOffer.split(',').map(skill => skill.trim()).filter(Boolean);
-    const skills_to_learn_array = formData.skillsToLearn.split(',').map(skill => skill.trim()).filter(Boolean);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
 
     try {
-      await register({ 
-        name: formData.name, 
-        email: formData.email, 
-        password: formData.password,
-        bio: formData.bio,
-        phone: formData.phone,
-        skills_to_offer: skills_to_offer_array,
-        skills_to_learn: skills_to_learn_array
-      });
+      const submitData = {
+        ...formData,
+        skills_to_offer: formData.skills_to_offer 
+          ? formData.skills_to_offer.split(',').map(s => s.trim()).filter(s => s)
+          : [],
+        skills_to_learn: formData.skills_to_learn 
+          ? formData.skills_to_learn.split(',').map(s => s.trim()).filter(s => s)
+          : []
+      };
 
-      closeLoadingAlert();
-      navigate('/dashboard');
+      await api.post('/auth/register', submitData);
+      
+      // Redirigir al login con mensaje de éxito
+      navigate('/login', { 
+        state: { message: '¡Registro exitoso! Ahora puedes iniciar sesión.' }
+      });
     } catch (err) {
-      closeLoadingAlert();
-      // Los errores se manejan en AuthContext
+      console.error('Registration error:', err);
+      setError(err.response?.data?.msg || 'Error al registrarse. Intenta de nuevo.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light py-5">
-      <div className="bg-white p-5 rounded-4 shadow-lg" style={{ maxWidth: '500px', width: '100%' }}>
-        <div className="text-center mb-4">
-          <FaUserPlus size={60} className="text-primary" />
-          <h1 className="h4 fw-bold text-dark mt-3">Crea tu cuenta</h1>
-          <p className="text-muted small">Únete a la comunidad de intercambio de habilidades.</p>
-        </div>
+    <div className="d-flex flex-column min-vh-100 justify-content-center align-items-center bg-light">
+      <div className="bg-white p-5 rounded-4 shadow-lg w-100" style={{ maxWidth: '500px' }}>
+        <h2 className="fs-3 fw-bold text-center text-dark mb-4">Regístrate</h2>
+        
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label htmlFor="name" className="form-label fw-semibold text-secondary">Nombre Completo *</label>
+            <label htmlFor="name" className="form-label text-secondary fw-semibold">
+              Nombre Completo
+            </label>
             <input
               type="text"
               name="name"
               id="name"
-              name="name"
-              className="form-control rounded-pill"
+              className={`form-control ${error && !formData.name ? 'is-invalid' : ''}`}
               placeholder="Tu nombre completo"
               value={formData.name}
               onChange={handleChange}
@@ -96,13 +105,14 @@ const RegisterPage = () => {
           </div>
           
           <div className="mb-3">
-            <label htmlFor="email" className="form-label fw-semibold text-secondary">Correo Electrónico *</label>
+            <label htmlFor="email" className="form-label text-secondary fw-semibold">
+              Correo Electrónico
+            </label>
             <input
               type="email"
               name="email"
               id="email"
-              name="email"
-              className="form-control rounded-pill"
+              className={`form-control ${error && !formData.email ? 'is-invalid' : ''}`}
               placeholder="tu@correo.com"
               value={formData.email}
               onChange={handleChange}
@@ -110,123 +120,81 @@ const RegisterPage = () => {
               disabled={loading}
             />
           </div>
-          {/* Campo de Teléfono */}
+          
           <div className="mb-3">
-            <label htmlFor="phone" className="form-label fw-semibold text-secondary">Teléfono</label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              className="form-control rounded-pill"
-              placeholder="+34 123 456 789"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-          </div>
-          {/* Campo de Contraseña */}
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label fw-semibold text-secondary">
-              Contraseña *
-              <FaInfoCircle 
-                className="ms-1 text-muted" 
-                size={14} 
-                title="Mínimo 6 caracteres, incluye mayúscula, minúscula y número"
-              />
+            <label htmlFor="password" className="form-label text-secondary fw-semibold">
+              Contraseña
             </label>
-            <div className="position-relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                className="form-control rounded-pill pe-5"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                minLength="6"
-                required
-              />
-              <button
-                type="button"
-                className="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ zIndex: 10 }}
-              >
-                {showPassword ? (
-                  <FaEyeSlash className="text-muted" />
-                ) : (
-                  <FaEye className="text-muted" />
-                )}
-              </button>
-            </div>
-          </div>
-          {/* Campo de Biografía */}
-          <div className="mb-3">
-            <label htmlFor="bio" className="form-label fw-semibold text-secondary">Biografía</label>
-            <textarea
-              id="bio"
-              name="bio"
-              className="form-control"
-              rows="3"
-              placeholder="Cuéntanos un poco sobre ti..."
-              value={formData.bio}
+            <input
+              type="password"
+              name="password"
+              id="password"
+              className={`form-control ${error && formData.password.length < 6 ? 'is-invalid' : ''}`}
+              placeholder="Mínimo 6 caracteres"
+              value={formData.password}
               onChange={handleChange}
-              style={{ borderRadius: '15px' }}
+              required
+              disabled={loading}
             />
             <div className="form-text">Debe tener al menos 6 caracteres</div>
           </div>
           
           <div className="mb-3">
-            <label htmlFor="skillsToOffer" className="form-label text-secondary fw-semibold">
+            <label htmlFor="skills_to_offer" className="form-label text-secondary fw-semibold">
               Habilidades que ofreces
-              <small className="text-muted ms-1">(separadas por comas)</small>
             </label>
             <input
               type="text"
-              id="skillsToOffer"
-              name="skillsToOffer"
-              className="form-control rounded-pill"
-              placeholder="Ej: Diseño Web, Cocina, Guitarra"
-              value={formData.skillsToOffer}
+              name="skills_to_offer"
+              id="skills_to_offer"
+              className="form-control"
+              placeholder="Ej: JavaScript, Cocina, Inglés (separadas por comas)"
+              value={formData.skills_to_offer}
               onChange={handleChange}
+              disabled={loading}
             />
             <div className="form-text">Opcional - separa con comas</div>
           </div>
           
           <div className="mb-4">
-            <label htmlFor="skillsToLearn" className="form-label text-secondary fw-semibold">
+            <label htmlFor="skills_to_learn" className="form-label text-secondary fw-semibold">
               Habilidades que quieres aprender
-              <small className="text-muted ms-1">(separadas por comas)</small>
             </label>
             <input
               type="text"
-              id="skillsToLearn"
-              name="skillsToLearn"
-              className="form-control rounded-pill"
-              placeholder="Ej: Fotografía, Python, Francés"
-              value={formData.skillsToLearn}
+              name="skills_to_learn"
+              id="skills_to_learn"
+              className="form-control"
+              placeholder="Ej: Piano, Fotografía, Python (separadas por comas)"
+              value={formData.skills_to_learn}
               onChange={handleChange}
+              disabled={loading}
             />
             <div className="form-text">Opcional - separa con comas</div>
           </div>
+          
           <button
             type="submit"
-            className="btn btn-primary fw-semibold rounded-pill shadow-sm w-100 py-2"
-            disabled={isLoading}
+            className="btn btn-primary fw-semibold rounded-pill shadow-sm w-100"
+            disabled={loading}
           >
-            {isLoading ? (
+            {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Creando cuenta...
+                Registrando...
               </>
             ) : (
-              'Crear cuenta'
+              'Regístrate'
             )}
           </button>
         </form>
         
         <div className="text-center mt-3">
           <p className="text-muted">
-            ¿Ya tienes una cuenta? <Link to="/login" className="text-decoration-none">Inicia sesión</Link>
+            ¿Ya tienes una cuenta?{' '}
+            <Link to="/login" className="text-decoration-none fw-semibold">
+              Inicia sesión
+            </Link>
           </p>
         </div>
       </div>

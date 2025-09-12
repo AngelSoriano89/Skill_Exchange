@@ -3,8 +3,6 @@ const connectDB = require('./config/database');
 const cors = require('cors');
 const corsOptions = require('./config/corsOptions');
 const path = require('path');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger');
 
 require('dotenv').config();
 
@@ -14,33 +12,14 @@ connectDB();
 app.use(express.json({ extended: false }));
 app.use(cors(corsOptions));
 
-// Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+// Servir archivos estáticos (imágenes de avatares)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Ruta de bienvenida con información de la API
-app.get('/', (req, res) => {
-  res.json({
-    message: 'API de Intercambio de Habilidades',
-    version: '1.0.0',
-    documentation: '/api-docs',
-    endpoints: {
-      auth: '/api/auth',
-      skills: '/api/skills',
-      exchanges: '/api/exchanges',
-      ratings: '/api/ratings',
-      users: '/api/users',
-      profile: '/api/profile'
-    }
-  });
-});
-
-// Definir rutas de la API
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes); // Ruta de perfil (correcta)
-app.use('/api/users', userRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/exchanges', exchangeRoutes);
-app.use('/api/ratings', ratingRoutes);
+// Definir rutas
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/skills', require('./routes/skillRoutes'));
+app.use('/api/exchanges', require('./routes/exchangeRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
