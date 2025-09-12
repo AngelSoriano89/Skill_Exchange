@@ -85,3 +85,17 @@ exports.login = async (req, res) => {
     res.status(500).send('Error del servidor');
   }
 };
+
+// @route   GET api/auth/me
+// @desc    Obtener los datos del usuario logueado
+// @access  Private
+exports.getLoggedInUser = async (req, res) => {
+  try {
+    // req.user viene del authMiddleware, que valida el token y añade el usuario a la petición.
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
