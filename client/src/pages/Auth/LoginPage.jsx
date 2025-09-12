@@ -1,15 +1,15 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { FaUserCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { showLoadingAlert, closeLoadingAlert } from '../../utils/sweetAlert';
 
 const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,13 +28,21 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    showLoadingAlert('Iniciando sesión...', 'Verificando credenciales');
 
-    if (!formData.email || !formData.password) {
-      setError('Por favor completa todos los campos');
-      setLoading(false);
-      return;
+    try {
+      await login(email, password);
+      closeLoadingAlert();
+      navigate('/dashboard');
+    } catch (err) {
+      closeLoadingAlert();
+      // Los errores ahora se manejan en AuthContext
+    } finally {
+      setIsLoading(false);
     }
 
     const result = await login(formData.email, formData.password);
@@ -89,28 +97,39 @@ const LoginPage = () => {
             <label htmlFor="password" className="form-label fw-semibold text-secondary">
               Contraseña
             </label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              className={`form-control ${error ? 'is-invalid' : ''}`}
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
+            <div className="position-relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                className="form-control rounded-pill pe-5"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="btn position-absolute top-50 end-0 translate-middle-y me-3 p-0 border-0 bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ zIndex: 10 }}
+              >
+                {showPassword ? (
+                  <FaEyeSlash className="text-muted" />
+                ) : (
+                  <FaEye className="text-muted" />
+                )}
+              </button>
+            </div>
           </div>
-          
           <button
             type="submit"
             className="btn btn-primary fw-semibold rounded-pill w-100 py-2 shadow-sm"
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Iniciando sesión...
+                Iniciando...
               </>
             ) : (
               'Iniciar Sesión'

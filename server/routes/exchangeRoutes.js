@@ -1,44 +1,138 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  createExchangeRequest, 
-  getMyExchanges,
-  getPendingRequests,
-  acceptExchangeRequest,
-  rejectExchangeRequest,
+const auth = require('../middleware/auth');
+const {
+  createExchangeRequest,
+  getReceivedExchanges,
+  getSentExchanges,
+  getAcceptedExchanges,
+  getCompletedExchanges,
+  acceptExchange,
+  rejectExchange,
   completeExchange,
-  getExchangeById
+  getMyExchanges
 } = require('../controllers/exchangeController');
 const auth = require('../middleware/auth');
 
-// @route   POST api/exchanges/request
-// @desc    Crear una solicitud de intercambio
-// @access  Private
-router.post('/request', auth, createExchangeRequest);
+/**
+ * @swagger
+ * tags:
+ *   name: Exchanges
+ *   description: Gestión de intercambios de habilidades
+ */
 
-// @route   GET api/exchanges/my-requests
-// @desc    Obtener todas las solicitudes de intercambio del usuario (enviadas y recibidas)
-// @access  Private
-router.get('/my-requests', auth, getMyExchanges);
+/**
+ * @swagger
+ * /exchanges/request:
+ *   post:
+ *     summary: Crear una solicitud de intercambio
+ *     tags: [Exchanges]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - recipientId
+ *               - skills_to_offer
+ *               - skills_to_learn
+ *               - message
+ *             properties:
+ *               recipientId:
+ *                 type: string
+ *                 description: ID del usuario destinatario
+ *               skills_to_offer:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Habilidades que ofreces
+ *                 example: ["JavaScript", "React"]
+ *               skills_to_learn:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Habilidades que quieres aprender
+ *                 example: ["Python", "Django"]
+ *               message:
+ *                 type: string
+ *                 description: Mensaje para el destinatario
+ *                 example: Hola, me interesa intercambiar habilidades contigo
+ *     responses:
+ *       200:
+ *         description: Solicitud creada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Exchange'
+ *       400:
+ *         description: Datos inválidos
+ *       401:
+ *         description: No autorizado
+ *       500:
+ *         description: Error del servidor
+ */
+router.post('/request', auth, validateExchangeRequest, handleValidationErrors, createExchangeRequest);
 
-// @route   GET api/exchanges/pending
-// @desc    Obtener solicitudes de intercambio pendientes para el usuario actual
+// @route   GET api/exchanges/received
+// @desc    Obtener solicitudes de intercambio recibidas
 // @access  Private
-router.get('/pending', auth, getPendingRequests);
+router.get('/received', auth, getReceivedExchanges);
 
-// @route   PUT api/exchanges/accept/:id
+// @route   GET api/exchanges/sent
+// @desc    Obtener solicitudes de intercambio enviadas
+// @access  Private
+router.get('/sent', auth, getSentExchanges);
+
+// @route   GET api/exchanges/accepted
+// @desc    Obtener intercambios aceptados
+// @access  Private
+router.get('/accepted', auth, getAcceptedExchanges);
+
+// @route   GET api/exchanges/completed
+// @desc    Obtener intercambios completados
+// @access  Private
+router.get('/completed', auth, getCompletedExchanges);
+
+// @route   POST api/exchanges/accept/:id
 // @desc    Aceptar una solicitud de intercambio
 // @access  Private
-router.put('/accept/:id', auth, acceptExchangeRequest);
+router.post('/accept/:id', auth, acceptExchange);
 
-// @route   PUT api/exchanges/reject/:id
+// @route   POST api/exchanges/reject/:id
 // @desc    Rechazar una solicitud de intercambio
 // @access  Private
-router.put('/reject/:id', auth, rejectExchangeRequest);
+router.post('/reject/:id', auth, rejectExchange);
 
-// @route   PUT api/exchanges/complete/:id
-// @desc    Marcar un intercambio como completado
-// @access  Private
+/**
+ * @swagger
+ * /exchanges/complete/{id}:
+ *   put:
+ *     summary: Marcar un intercambio como completado
+ *     tags: [Exchanges]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del intercambio
+ *     responses:
+ *       200:
+ *         description: Intercambio completado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Exchange'
+ *       401:
+ *         description: No autorizado
+ *       404:
+ *         description: Intercambio no encontrado
+ */
 router.put('/complete/:id', auth, completeExchange);
 
 // @route   GET api/exchanges/:id

@@ -76,3 +76,61 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* Skill Card Styles */
+.skill-card {
+    transition: all 0.3s ease;
+    border: none !important;
+}
+
+.skill-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.skill-card .card-img-top {
+    transition: transform 0.3s ease;
+}
+
+.skill-card:hover .card-img-top {
+    transform: scale(1.03);
+}
+
+/* Hover effects for navigation items */
+.hover-bg-light:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Custom gradient for user avatars */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Smooth transitions for buttons */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar for dropdowns */
+.dropdown-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+

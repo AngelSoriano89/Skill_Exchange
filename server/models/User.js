@@ -42,21 +42,69 @@ const UserSchema = new mongoose.Schema({
       type: String,
     },
   ],
-  languages: [
-    {
+  phone: {
+    type: String,
+    default: '',
+  },
+  location: {
+    city: {
       type: String,
+      default: '',
     },
-  ],
-  interests: [
-    {
+    country: {
       type: String,
+      default: '',
     },
-  ],
+    coordinates: {
+      latitude: {
+        type: Number,
+        default: null,
+      },
+      longitude: {
+        type: Number,
+        default: null,
+      },
+    },
+  },
   avatar: {
     type: String,
     default: '',
   },
+  averageRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+  },
+  totalRatings: {
+    type: Number,
+    default: 0,
+  },
+  totalExchanges: {
+    type: Number,
+    default: 0,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false,
+  },
+  preferredContactMethods: [{
+    type: String,
+    enum: ['email', 'phone'],
+  }],
   date: {
+    type: Date,
+    default: Date.now,
+  },
+  lastActive: {
     type: Date,
     default: Date.now,
   },
