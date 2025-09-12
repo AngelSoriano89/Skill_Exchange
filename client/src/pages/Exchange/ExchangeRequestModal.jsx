@@ -1,99 +1,280 @@
-import React, { useState } from 'react';
-import { FaTimes, FaEnvelope } from 'react-icons/fa';
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import api from '../../api/api';
 
 const ExchangeRequestModal = ({ onClose, recipient }) => {
-  const [message, setMessage] = useState('');
-  const [skills_to_offer, setSkillsToOffer] = useState([]);
-  const [skills_to_learn, setSkillsToLearn] = useState([]);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  
+  const [formData, setFormData] = useState({
+    message: '',
+    skills_to_offer: '',
+    skills_to_learn: ''
+  });
+  
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Limpiar error cuando el usuario escriba
+    if (error) setError('');
+  };
+
+  const validateForm = () => {
+    if (!formData.message.trim()) {
+      setError('Por favor escribe un mensaje personalizado');
+      return false;
+    }
+    if (!formData.skills_to_offer.trim()) {
+      setError('Especifica qué habilidades puedes ofrecer');
+      return false;
+    }
+    if (!formData.skills_to_learn.trim()) {
+      setError('Especifica qué habilidades quieres aprender');
+      return false;
+    }
+    return true;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      await api.post('/exchanges/request', {
+      const requestData = {
         recipientId: recipient._id,
-        skills_to_offer,
-        skills_to_learn,
-        message,
-      });
+        skills_to_offer: formData.skills_to_offer.split(',').map(s => s.trim()).filter(s => s),
+        skills_to_learn: formData.skills_to_learn.split(',').map(s => s.trim()).filter(s => s),
+        message: formData.message.trim(),
+      };
+
+      await api.post('/exchanges/request', requestData);
       setSuccess(true);
-      setError(null);
     } catch (err) {
-      setError('Error al enviar la solicitud. Intenta de nuevo.');
-      console.error(err);
+      console.error('Error sending exchange request:', err);
+      setError(err.response?.data?.msg || 'Error al enviar la solicitud. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (success) {
+      navigate('/dashboard');
+    } else {
+      onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50">
-      <div className="relative p-8 bg-white w-96 max-w-lg mx-auto rounded-lg shadow-xl">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-        >
-          <FaTimes size={20} />
-        </button>
-        <h3 className="text-xl font-semibold text-center mb-4">
-          Solicitar Intercambio a {recipient.name}
-        </h3>
-        {success ? (
-          <div className="text-center text-green-600">
-            <p>¡Solicitud enviada con éxito!</p>
-            <button onClick={onClose} className="mt-4 bg-green-500 text-white px-4 py-2 rounded-full">Cerrar</button>
+    <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050 }}>
+      <div className="modal-dialog modal-lg modal-dialog-centered">
+        <div className="modal-content border-0 shadow-lg">
+          {/* Header */}
+          <div className="modal-header bg-primary text-white">
+            <h5 className="modal-title d-flex align-items-center">
+              <i className="fas fa-paper-plane me-2"></i>
+              Solicitar Intercambio con {recipient.name}
+            </h5>
+            <button 
+              type="button" 
+              className="btn-close btn-close-white"
+              onClick={handleClose}
+              disabled={loading}
+            ></button>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Mensaje
-              </label>
-              <textarea
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                rows="4"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Habilidades que ofreces
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                placeholder="Ej. 'Inglés, Cocina'"
-                value={skills_to_offer.join(', ')}
-                onChange={(e) => setSkillsToOffer(e.target.value.split(',').map(s => s.trim()))}
-                required
-              />
-            </div>
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Habilidades que quieres aprender
-              </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                type="text"
-                placeholder="Ej. 'Música, Jardinería'"
-                value={skills_to_learn.join(', ')}
-                onChange={(e) => setSkillsToLearn(e.target.value.split(',').map(s => s.trim()))}
-                required
-              />
-            </div>
-            {error && <p className="text-red-500 text-center text-xs italic mb-4">{error}</p>}
-            <div className="flex items-center justify-between">
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+
+          <div className="modal-body p-4">
+            {success ? (
+              /* Vista de éxito */
+              <div className="text-center py-4">
+                <div className="mb-4">
+                  <i className="fas fa-check-circle text-success" style={{ fontSize: '4rem' }}></i>
+                </div>
+                <h4 className="text-success mb-3">¡Solicitud enviada con éxito!</h4>
+                <p className="text-muted mb-4">
+                  Tu solicitud de intercambio ha sido enviada a <strong>{recipient.name}</strong>. 
+                  Recibirás una notificación cuando respondan.
+                </p>
+                <div className="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    <i className="fas fa-tachometer-alt me-2"></i>
+                    Ir al Dashboard
+                  </button>
+                  <button 
+                    className="btn btn-outline-secondary"
+                    onClick={onClose}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Formulario */
+              <>
+                {/* Información del destinatario */}
+                <div className="row mb-4">
+                  <div className="col-auto">
+                    <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                         style={{ width: '60px', height: '60px', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                      {recipient.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="col">
+                    <h6 className="mb-1 fw-bold">{recipient.name}</h6>
+                    <p className="text-muted small mb-2">{recipient.email}</p>
+                    <div className="d-flex flex-wrap gap-1">
+                      {recipient.skills_to_offer && recipient.skills_to_offer.slice(0, 3).map((skill, index) => (
+                        <span key={index} className="badge bg-success bg-opacity-15 text-success border border-success rounded-pill px-2 py-1">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="alert alert-danger" role="alert">
+                    <i className="fas fa-exclamation-triangle me-2"></i>
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                  {/* Mensaje personalizado */}
+                  <div className="mb-4">
+                    <label className="form-label fw-bold text-dark">
+                      <i className="fas fa-comment me-2 text-primary"></i>
+                      Mensaje personalizado *
+                    </label>
+                    <textarea
+                      className={`form-control ${error && !formData.message.trim() ? 'is-invalid' : ''}`}
+                      name="message"
+                      rows="4"
+                      placeholder={`Hola ${recipient.name}! Me interesa intercambiar habilidades contigo. Te cuento un poco sobre mí...`}
+                      value={formData.message}
+                      onChange={handleChange}
+                      disabled={loading}
+                      required
+                    />
+                    <div className="form-text">
+                      Preséntate y explica por qué te interesa este intercambio
+                    </div>
+                  </div>
+
+                  {/* Habilidades que ofreces */}
+                  <div className="mb-4">
+                    <label className="form-label fw-bold text-dark">
+                      <i className="fas fa-hand-holding me-2 text-success"></i>
+                      Habilidades que puedes ofrecer *
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-control ${error && !formData.skills_to_offer.trim() ? 'is-invalid' : ''}`}
+                      name="skills_to_offer"
+                      placeholder="Ej: JavaScript, Desarrollo Web, React"
+                      value={formData.skills_to_offer}
+                      onChange={handleChange}
+                      disabled={loading}
+                      required
+                    />
+                    <div className="form-text">
+                      Separa las habilidades con comas. Estas son las que enseñarás.
+                    </div>
+                  </div>
+
+                  {/* Habilidades que quieres aprender */}
+                  <div className="mb-4">
+                    <label className="form-label fw-bold text-dark">
+                      <i className="fas fa-graduation-cap me-2 text-info"></i>
+                      Habilidades que quieres aprender *
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-control ${error && !formData.skills_to_learn.trim() ? 'is-invalid' : ''}`}
+                      name="skills_to_learn"
+                      placeholder="Ej: Piano, Cocina italiana, Fotografía"
+                      value={formData.skills_to_learn}
+                      onChange={handleChange}
+                      disabled={loading}
+                      required
+                    />
+                    <div className="form-text">
+                      Separa las habilidades con comas. Estas son las que aprenderás.
+                    </div>
+                  </div>
+
+                  {/* Sugerencia automática basada en el perfil */}
+                  {(recipient.skills_to_offer?.length > 0 || user?.skills_to_offer?.length > 0) && (
+                    <div className="alert alert-info" role="alert">
+                      <h6 className="alert-heading">
+                        <i className="fas fa-lightbulb me-2"></i>
+                        Sugerencias basadas en los perfiles:
+                      </h6>
+                      {recipient.skills_to_offer?.length > 0 && (
+                        <p className="mb-1">
+                          <strong>Podrías aprender:</strong> {recipient.skills_to_offer.join(', ')}
+                        </p>
+                      )}
+                      {user?.skills_to_offer?.length > 0 && (
+                        <p className="mb-0">
+                          <strong>Podrías ofrecer:</strong> {user.skills_to_offer.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </form>
+              </>
+            )}
+          </div>
+
+          {!success && (
+            <div className="modal-footer bg-light">
+              <button 
+                type="button" 
+                className="btn btn-secondary"
+                onClick={handleClose}
+                disabled={loading}
               >
-                <FaEnvelope className="inline-block mr-2" /> Enviar Solicitud
+                <i className="fas fa-times me-2"></i>
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                className="btn btn-primary"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-paper-plane me-2"></i>
+                    Enviar Solicitud
+                  </>
+                )}
               </button>
             </div>
-          </form>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

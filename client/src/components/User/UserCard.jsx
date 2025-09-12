@@ -2,41 +2,154 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const UserCard = ({ user }) => {
-  const { name, email, skills_to_offer, skills_to_learn, _id } = user;
+  const { name, email, skills_to_offer = [], skills_to_learn = [], _id, bio, avatar, location, experience } = user;
 
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center">
-      <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-4xl font-bold text-gray-500 mb-4">
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:5000${avatarPath}`;
+  };
+
+  const renderAvatar = () => {
+    const avatarUrl = avatar ? getAvatarUrl(avatar) : null;
+    
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${name}`}
+          className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg mx-auto"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.nextElementSibling;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      );
+    }
+    
+    return (
+      <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg mx-auto">
         {name.charAt(0).toUpperCase()}
       </div>
-      <h3 className="text-xl font-bold mb-1">{name}</h3>
-      <p className="text-sm text-gray-500 mb-4">{email}</p>
+    );
+  };
+
+  return (
+    <div className="card card-hover group p-6 h-full flex flex-col">
+      {/* Avatar y Info Básica */}
+      <div className="text-center mb-4">
+        <div className="relative mb-4">
+          {renderAvatar()}
+          <div style={{ display: 'none' }} className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg mx-auto">
+            {name.charAt(0).toUpperCase()}
+          </div>
+          
+          {/* Badge de experiencia */}
+          {experience && (
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+              <span className="badge-warning text-xs px-2 py-1">
+                {experience}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        <h3 className="text-lg font-bold text-gray-900 mb-1">{name}</h3>
+        <p className="text-sm text-gray-500 mb-2">{email}</p>
+        
+        {location && (
+          <p className="text-xs text-gray-400 flex items-center justify-center">
+            <i className="fas fa-map-marker-alt mr-1"></i>
+            {location}
+          </p>
+        )}
+        
+        {bio && (
+          <p className="text-sm text-gray-600 italic mt-3 line-clamp-2">
+            "{bio}"
+          </p>
+        )}
+      </div>
       
-      <div className="w-full text-left mb-4">
-        <h4 className="font-semibold text-gray-700">Ofrece:</h4>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {skills_to_offer.map((skill, index) => (
-            <span key={index} className="skill-tag bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm">
-              {skill}
-            </span>
-          ))}
+      {/* Habilidades que ofrece */}
+      <div className="mb-4 flex-grow">
+        <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center">
+          <i className="fas fa-hand-holding mr-2"></i>
+          Enseña:
+        </h4>
+        <div className="flex flex-wrap gap-1 mb-3">
+          {skills_to_offer.length > 0 ? (
+            <>
+              {skills_to_offer.slice(0, 3).map((skill, index) => (
+                <span key={index} className="badge-success text-xs">
+                  {skill}
+                </span>
+              ))}
+              {skills_to_offer.length > 3 && (
+                <span className="badge-success text-xs">
+                  +{skills_to_offer.length - 3} más
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-gray-400 italic">No especificado</span>
+          )}
         </div>
       </div>
       
-      <div className="w-full text-left mb-4">
-        <h4 className="font-semibold text-gray-700">Quiere aprender:</h4>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {skills_to_learn.map((skill, index) => (
-            <span key={index} className="skill-tag bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm">
-              {skill}
-            </span>
-          ))}
+      {/* Habilidades que quiere aprender */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center">
+          <i className="fas fa-graduation-cap mr-2"></i>
+          Quiere aprender:
+        </h4>
+        <div className="flex flex-wrap gap-1">
+          {skills_to_learn.length > 0 ? (
+            <>
+              {skills_to_learn.slice(0, 3).map((skill, index) => (
+                <span key={index} className="badge-info text-xs">
+                  {skill}
+                </span>
+              ))}
+              {skills_to_learn.length > 3 && (
+                <span className="badge-info text-xs">
+                  +{skills_to_learn.length - 3} más
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-gray-400 italic">No especificado</span>
+          )}
         </div>
       </div>
       
-      <Link to={`/profile/${_id}`} className="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-full hover:bg-indigo-700 transition-colors duration-200 shadow-lg w-full">
-        Ver Perfil
-      </Link>
+      {/* Botón de acción */}
+      <div className="mt-auto">
+        <Link 
+          to={`/profile/${_id}`} 
+          className="w-full btn-primary text-center block group-hover:bg-primary-700 transition-colors"
+        >
+          <i className="fas fa-user-circle mr-2"></i>
+          Ver Perfil Completo
+        </Link>
+      </div>
+      
+      {/* Indicadores de compatibilidad */}
+      {(skills_to_offer.length > 0 || skills_to_learn.length > 0) && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="flex justify-center space-x-4 text-xs text-gray-500">
+            <span className="flex items-center">
+              <i className="fas fa-star text-yellow-500 mr-1"></i>
+              {skills_to_offer.length} habilidades
+            </span>
+            <span className="flex items-center">
+              <i className="fas fa-target text-blue-500 mr-1"></i>
+              {skills_to_learn.length} objetivos
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
