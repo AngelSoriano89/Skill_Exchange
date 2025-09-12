@@ -97,7 +97,7 @@ const LandingPage = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-2xl mx-auto">
               <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                 <div className="text-3xl font-bold text-primary-600 mb-2">500+</div>
                 <div className="text-gray-600">Usuarios Activos</div>
@@ -110,7 +110,7 @@ const LandingPage = () => {
                 <div className="text-3xl font-bold text-blue-600 mb-2">50+</div>
                 <div className="text-gray-600">Habilidades Diferentes</div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -184,7 +184,7 @@ const LandingPage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-white">
+      {/* <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16 animate-fade-in-up">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -221,7 +221,7 @@ const LandingPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary-600 to-blue-600 text-white">
