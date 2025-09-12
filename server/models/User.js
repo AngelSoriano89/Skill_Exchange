@@ -17,6 +17,20 @@ const UserSchema = new mongoose.Schema({
   bio: {
     type: String,
     default: '',
+    maxlength: 500,
+  },
+  phone: {
+    type: String,
+    default: '',
+  },
+  location: {
+    type: String,
+    default: '',
+  },
+  experience: {
+    type: String,
+    enum: ['Principiante', 'Intermedio', 'Avanzado', 'Experto', 'Profesional'],
+    default: 'Principiante',
   },
   skills_to_offer: [
     {
@@ -28,8 +42,19 @@ const UserSchema = new mongoose.Schema({
       type: String,
     },
   ],
+  languages: [
+    {
+      type: String,
+    },
+  ],
+  interests: [
+    {
+      type: String,
+    },
+  ],
   avatar: {
     type: String,
+    default: '',
   },
   date: {
     type: Date,
