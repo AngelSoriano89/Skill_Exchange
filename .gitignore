@@ -1,1 +1,4 @@
 .env
+
+#Modulo de Node.js
+/node_modules

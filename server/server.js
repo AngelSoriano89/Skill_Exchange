@@ -11,6 +11,14 @@ connectDB();
 
 app.use(express.json({ extended: false }));
 app.use(cors(corsOptions));
+app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'client', 'build', 'index.html'));
+  });
+
+// Servir archivos estáticos (imágenes de avatares)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Definir rutas
 app.use('/api/auth', require('./routes/authRoutes'));
