@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../api/api'; // CORREGIDO: import default en lugar de destructuring
+import api from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
-import { FaEnvelope, FaPhone, FaCheckCircle } from 'react-icons/fa';
 
 const UserContactPage = () => {
   const { exchangeId } = useParams();
@@ -45,14 +44,73 @@ const UserContactPage = () => {
     }
   };
 
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:5000${avatarPath}`;
+  };
+
+  const renderAvatar = (userData) => {
+    if (!userData) return null;
+    
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
+    
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${userData.name}`}
+          className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.nextElementSibling;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      );
+    }
+    
+    return (
+      <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg">
+        {userData.name?.charAt(0).toUpperCase() || 'U'}
+      </div>
+    );
+  };
+
+  const renderAvatarWithFallback = (userData) => {
+    if (!userData) return null;
+    
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
+    
+    return (
+      <div className="relative">
+        {avatarUrl && (
+          <img
+            src={avatarUrl}
+            alt={`Avatar de ${userData.name}`}
+            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        )}
+        <div 
+          className={`fallback-avatar w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg ${avatarUrl ? 'hidden' : 'flex'}`}
+        >
+          {userData.name?.charAt(0).toUpperCase() || 'U'}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p className="text-muted">Cargando detalles del intercambio...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Cargando detalles del intercambio...</p>
         </div>
       </div>
     );
@@ -60,18 +118,20 @@ const UserContactPage = () => {
 
   if (error) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-        <div className="text-center">
-          <div className="alert alert-danger" role="alert">
-            <i className="fas fa-exclamation-triangle me-2"></i>
-            {error}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="card p-8 text-center">
+            <i className="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Error</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button 
+              className="btn-primary w-full"
+              onClick={() => navigate('/dashboard')}
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              Volver al Dashboard
+            </button>
           </div>
-          <button 
-            className="btn btn-primary"
-            onClick={() => navigate('/dashboard')}
-          >
-            Volver al Dashboard
-          </button>
         </div>
       </div>
     );
@@ -79,15 +139,20 @@ const UserContactPage = () => {
 
   if (!exchange) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-        <div className="text-center">
-          <p className="text-muted">Intercambio no encontrado</p>
-          <button 
-            className="btn btn-primary"
-            onClick={() => navigate('/dashboard')}
-          >
-            Volver al Dashboard
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="card p-8 text-center">
+            <i className="fas fa-search text-gray-300 text-5xl mb-4"></i>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Intercambio no encontrado</h2>
+            <p className="text-gray-600 mb-6">El intercambio que buscas no existe o no tienes permisos para verlo.</p>
+            <button 
+              className="btn-primary w-full"
+              onClick={() => navigate('/dashboard')}
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              Volver al Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -96,131 +161,163 @@ const UserContactPage = () => {
   const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
 
   return (
-    <div className="min-vh-100 bg-light d-flex align-items-center justify-content-center p-4">
-      <div className="container" style={{ maxWidth: '800px' }}>
-        <div className="card shadow-lg border-0 rounded-4">
-          <div className="card-header bg-success text-white text-center py-4 rounded-top-4">
-            <h1 className="h2 mb-0">
-              <i className="fas fa-check-circle me-2"></i>
-              ¡Intercambio Aceptado!
-            </h1>
-          </div>
-          
-          <div className="card-body p-5 text-center">
-            <div className="row align-items-center">
-              <div className="col-md-4 mb-4 mb-md-0">
-                <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                     style={{ width: '100px', height: '100px', fontSize: '2.5rem', fontWeight: 'bold' }}>
-                  {otherUser.name.charAt(0).toUpperCase()}
-                </div>
-                <h3 className="text-dark">{otherUser.name}</h3>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="card p-8">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-check-circle text-white text-2xl"></i>
               </div>
-              
-              <div className="col-md-8">
-                <p className="lead text-muted mb-4">
-                  Ahora pueden contactarse directamente para coordinar su intercambio de habilidades.
-                </p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Intercambio Aceptado!</h1>
+              <p className="text-gray-600 text-lg">
+                Ahora pueden contactarse directamente para coordinar su intercambio de habilidades.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* User Info */}
+              <div className="text-center">
+                <div className="mb-4">
+                  {renderAvatarWithFallback(otherUser)}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{otherUser.name}</h3>
+                <p className="text-gray-600 mb-4">{otherUser.email}</p>
                 
-                <div className="bg-light p-4 rounded-3 mb-4">
-                  <h5 className="text-primary mb-3">
-                    <i className="fas fa-info-circle me-2"></i>
-                    Información de Contacto
-                  </h5>
+                {otherUser.phone && (
+                  <div className="flex items-center justify-center text-gray-600 mb-2">
+                    <i className="fas fa-phone text-green-500 mr-2"></i>
+                    <span>{otherUser.phone}</span>
+                  </div>
+                )}
+                
+                {otherUser.location && (
+                  <div className="flex items-center justify-center text-gray-600">
+                    <i className="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                    <span>{otherUser.location}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Exchange Details */}
+              <div className="lg:col-span-2">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <i className="fas fa-exchange-alt text-primary-600 mr-2"></i>
+                    Detalles del Intercambio
+                  </h4>
                   
-                  <div className="row text-start">
-                    <div className="col-sm-6 mb-3">
-                      <div className="d-flex align-items-center">
-                        <FaEnvelope className="text-primary me-2" />
-                        <div>
-                          <small className="text-muted d-block">Correo Electrónico:</small>
-                          <strong>{otherUser.email}</strong>
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="text-sm font-semibold text-green-700 mb-2">
+                        <i className="fas fa-hand-holding mr-2"></i>
+                        Habilidades ofrecidas:
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
+                        {exchange.skills_to_offer.map((skill, index) => (
+                          <span key={index} className="badge-success text-xs">
+                            {skill}
+                          </span>
+                        ))}
                       </div>
                     </div>
                     
-                    {otherUser.phone && (
-                      <div className="col-sm-6 mb-3">
-                        <div className="d-flex align-items-center">
-                          <FaPhone className="text-success me-2" />
-                          <div>
-                            <small className="text-muted d-block">Teléfono:</small>
-                            <strong>{otherUser.phone}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="bg-info bg-opacity-10 p-4 rounded-3 mb-4">
-                  <h6 className="text-info mb-2">
-                    <i className="fas fa-exchange-alt me-2"></i>
-                    Detalles del Intercambio
-                  </h6>
-                  <div className="row text-start">
-                    <div className="col-md-6 mb-2">
-                      <small className="text-muted">Habilidades ofrecidas:</small>
-                      <div>
-                        {exchange.skills_to_offer.map((skill, index) => (
-                          <span key={index} className="badge bg-primary me-1 mb-1">{skill}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="col-md-6 mb-2">
-                      <small className="text-muted">Habilidades solicitadas:</small>
-                      <div>
+                    <div>
+                      <h5 className="text-sm font-semibold text-blue-700 mb-2">
+                        <i className="fas fa-graduation-cap mr-2"></i>
+                        Habilidades solicitadas:
+                      </h5>
+                      <div className="flex flex-wrap gap-2">
                         {exchange.skills_to_learn.map((skill, index) => (
-                          <span key={index} className="badge bg-success me-1 mb-1">{skill}</span>
+                          <span key={index} className="badge-info text-xs">
+                            {skill}
+                          </span>
                         ))}
                       </div>
                     </div>
                   </div>
+
+                  {exchange.message && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <h5 className="text-sm font-semibold text-gray-700 mb-2">
+                        <i className="fas fa-comment mr-2"></i>
+                        Mensaje inicial:
+                      </h5>
+                      <p className="text-gray-600 italic text-sm bg-white rounded p-3">
+                        "{exchange.message}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact Actions */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+                  <div className="flex items-start">
+                    <i className="fas fa-lightbulb text-yellow-500 text-xl mr-3 mt-1"></i>
+                    <div>
+                      <h4 className="font-bold text-gray-900 mb-2">Consejos para un intercambio exitoso:</h4>
+                      <ul className="text-sm text-gray-700 space-y-1">
+                        <li>• Establezcan horarios y métodos de comunicación claros</li>
+                        <li>• Definan objetivos específicos para cada sesión</li>
+                        <li>• Sean pacientes y mantengan una actitud positiva</li>
+                        <li>• Una vez completado, no olviden marcar el intercambio como finalizado</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <a 
+                    href={`mailto:${otherUser.email}?subject=Intercambio de Habilidades - Skill Exchange&body=¡Hola ${otherUser.name}! Te contacto sobre nuestro intercambio de habilidades aceptado en Skill Exchange.%0A%0AHabilidades que ofreceré: ${exchange.skills_to_offer.join(', ')}%0AHabilidades que me enseñarás: ${exchange.skills_to_learn.join(', ')}%0A%0A¡Hablemos para coordinar nuestras sesiones!%0A%0ASaludos`}
+                    className="btn-primary flex-1 text-center"
+                  >
+                    <i className="fas fa-envelope mr-2"></i>
+                    Enviar Email
+                  </a>
+                  
+                  {otherUser.phone && (
+                    <a 
+                      href={`https://wa.me/${otherUser.phone.replace(/\D/g, '')}?text=¡Hola ${otherUser.name}! Te contacto sobre nuestro intercambio de habilidades en Skill Exchange.`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-success flex-1 text-center"
+                    >
+                      <i className="fab fa-whatsapp mr-2"></i>
+                      WhatsApp
+                    </a>
+                  )}
+                  
+                  <button
+                    onClick={handleCompleteExchange}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex-1"
+                    disabled={completing}
+                  >
+                    {completing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                        Marcando como completado...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check-circle mr-2"></i>
+                        Marcar como Completado
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="text-center mt-6">
+                  <button 
+                    onClick={() => navigate('/dashboard')}
+                    className="btn-outline-secondary"
+                  >
+                    <i className="fas fa-arrow-left mr-2"></i>
+                    Volver al Dashboard
+                  </button>
                 </div>
               </div>
-            </div>
-            
-            <div className="mt-4">
-              <div className="alert alert-warning" role="alert">
-                <i className="fas fa-lightbulb me-2"></i>
-                <strong>Consejo:</strong> Una vez que hayan completado su intercambio de habilidades, 
-                no olviden marcar el intercambio como completado usando el botón de abajo.
-              </div>
-              
-              <div className="d-flex flex-column flex-sm-row gap-3 justify-content-center">
-                <a 
-                  href={`mailto:${otherUser.email}?subject=Intercambio de Habilidades - Skill Exchange&body=¡Hola ${otherUser.name}! Te contacto sobre nuestro intercambio de habilidades...`}
-                  className="btn btn-primary btn-lg rounded-pill px-4"
-                >
-                  <FaEnvelope className="me-2" />
-                  Enviar Email
-                </a>
-                
-                <button
-                  onClick={handleCompleteExchange}
-                  className="btn btn-success btn-lg rounded-pill px-4"
-                  disabled={completing}
-                >
-                  {completing ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Marcando como completado...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheckCircle className="me-2" />
-                      Marcar como Completado
-                    </>
-                  )}
-                </button>
-              </div>
-              
-              <button 
-                className="btn btn-outline-secondary mt-3"
-                onClick={() => navigate('/dashboard')}
-              >
-                <i className="fas fa-arrow-left me-2"></i>
-                Volver al Dashboard
-              </button>
             </div>
           </div>
         </div>
