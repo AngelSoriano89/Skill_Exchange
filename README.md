@@ -1,47 +1,20 @@
-# Skill Exchange Platform
+# Backend de Intercambio de Habilidades
 
-Una plataforma moderna para el intercambio de habilidades entre usuarios, donde las personas pueden enseñar lo que saben y aprender lo que necesitan.
+Este es el backend de la aplicación, construido con Node.js, Express y MongoDB (Mongoose).
 
-## 🚀 Características
+## Requisitos
 
-- **Autenticación completa**: Registro, login y gestión de sesiones con JWT
-- **Perfiles de usuario**: Información detallada con avatares, habilidades y experiencia
-- **Sistema de intercambios**: Solicitudes, aceptación y seguimiento de intercambios
-- **Búsqueda avanzada**: Filtros por habilidades, categorías y ubicación
-- **Sistema de calificaciones**: Reputación y feedback entre usuarios
-- **Interfaz moderna**: Diseño responsive con Tailwind CSS
-- **Upload de archivos**: Avatares y imágenes de habilidades
+* Node.js (versión 18 o superior)
+* npm o yarn
+* MongoDB Atlas (o una instancia local)
 
-## 🛠️ Tecnologías
+## Instalación
 
-### Backend
-- Node.js + Express.js
-- MongoDB + Mongoose
-- JWT para autenticación
-- Multer para upload de archivos
-- Express-validator para validaciones
-- Bcrypt para hash de contraseñas
+1.  Navega a la carpeta `server`:
 
-### Frontend
-- React 18 con Hooks
-- React Router para navegación
-- Axios para peticiones HTTP
-- Tailwind CSS para estilos
-- Context API para estado global
-
-## 📦 Instalación
-
-### Prerrequisitos
-- Node.js (v14 o superior)
-- MongoDB (local o cloud)
-- npm o yarn
-
-### Configuración del Backend
-
-1. Navega al directorio del servidor:
-```bash
-cd server
-```
+    ```bash
+    cd server
+    ```
 
 2. Instala las dependencias:
 ```bash
