@@ -1,206 +1,159 @@
-import express from 'express';
+const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { validateRating, handleValidationErrors } = require('../middleware/validation');
-const {
-  rateExchange,
-  getUserRatings,
-  getExchangeRatings,
-  updateRating,
-  deleteRating,
-  getMyRatings
-} = require('../controllers/ratingController');
+const Rating = require('../models/Rating');
+const Exchange = require('../models/Exchange');
+const User = require('../models/User');
+const Skill = require('../models/Skill');
 
-/**
- * @swagger
- * tags:
- *   name: Ratings
- *   description: Sistema de calificaciones
- */
+// @route   POST /api/ratings
+// @desc    Calificar un intercambio
+// @access  Private
+const rateExchange = async (req, res) => {
+  const { exchangeId, rating, comment } = req.body;
+  
+  try {
+    // Verificar que el intercambio existe y está completado
+    const exchange = await Exchange.findById(exchangeId);
+    if (!exchange) {
+      return res.status(404).json({ msg: 'Intercambio no encontrado' });
+    }
 
-/**
- * @swagger
- * /ratings:
- *   post:
- *     summary: Calificar un intercambio
- *     tags: [Ratings]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - exchangeId
- *               - rating
- *             properties:
- *               exchangeId:
- *                 type: string
- *                 description: ID del intercambio a calificar
- *               rating:
- *                 type: integer
- *                 minimum: 1
- *                 maximum: 5
- *                 description: Calificación de 1 a 5
- *               comment:
- *                 type: string
- *                 maxLength: 300
- *                 description: Comentario opcional
- *     responses:
- *       201:
- *         description: Calificación creada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Rating'
- *       400:
- *         description: Datos inválidos o intercambio no completado
- *       401:
- *         description: No autorizado
- *       404:
- *         description: Intercambio no encontrado
- */
+    if (exchange.status !== 'completed') {
+      return res.status(400).json({ msg: 'Solo puedes calificar intercambios completados' });
+    }
+
+    // Verificar que el usuario es parte del intercambio
+    if (exchange.sender.toString() !== req.user.id && exchange.recipient.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'No autorizado para calificar este intercambio' });
+    }
+
+    // Comprobar si ya calificó
+    const existingRating = await Rating.findOne({ exchange: exchangeId, rater: req.user.id });
+    if (existingRating) {
+      return res.status(400).json({ msg: 'Ya has calificado este intercambio' });
+    }
+
+    // Crear nuevo rating
+    const newRating = new Rating({
+      exchange: exchangeId,
+      rater: req.user.id,
+      rating,
+      comment: comment || '',
+    });
+
+    await newRating.save();
+    await newRating.populate('rater', 'name avatar');
+    await newRating.populate('exchange', 'sender recipient');
+
+    // Actualizar el estado del intercambio
+    if (exchange.sender.toString() === req.user.id) {
+      exchange.ratings.senderRated = true;
+    } else {
+      exchange.ratings.recipientRated = true;
+    }
+    await exchange.save();
+
+    // Actualizar rating promedio del usuario calificado
+    const ratedUserId = exchange.sender.toString() === req.user.id 
+      ? exchange.recipient 
+      : exchange.sender;
+    await updateUserRating(ratedUserId);
+
+    res.status(201).json(newRating);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
+
+// @route   GET /api/ratings/user/:userId
+// @desc    Obtener las calificaciones recibidas por un usuario
+// @access  Public
+const getUserRatings = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    // Buscar intercambios donde el usuario fue sender o recipient
+    const exchanges = await Exchange.find({
+      $or: [{ sender: userId }, { recipient: userId }],
+      status: 'completed'
+    });
+
+    const exchangeIds = exchanges.map(exchange => exchange._id);
+
+    // Buscar ratings de esos intercambios donde el usuario NO es el que califica
+    const ratings = await Rating.find({
+      exchange: { $in: exchangeIds },
+      rater: { $ne: userId }
+    })
+      .populate('rater', 'name avatar')
+      .populate('exchange', 'sender recipient skill')
+      .sort({ date: -1 });
+
+    res.json(ratings);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
+
+// @route   GET /api/ratings/my-ratings
+// @desc    Obtener calificaciones hechas por el usuario autenticado
+// @access  Private
+const getMyRatings = async (req, res) => {
+  try {
+    const ratings = await Rating.find({ rater: req.user.id })
+      .populate('exchange', 'sender recipient skill')
+      .sort({ date: -1 });
+
+    res.json(ratings);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
+  }
+};
+
+// Función auxiliar para actualizar el rating promedio del usuario
+async function updateUserRating(userId) {
+  try {
+    // Buscar todos los intercambios donde el usuario participó
+    const exchanges = await Exchange.find({
+      $or: [{ sender: userId }, { recipient: userId }],
+      status: 'completed'
+    });
+
+    const exchangeIds = exchanges.map(exchange => exchange._id);
+
+    // Buscar todas las calificaciones recibidas
+    const ratings = await Rating.find({
+      exchange: { $in: exchangeIds },
+      rater: { $ne: userId }
+    });
+
+    if (ratings.length > 0) {
+      const totalRating = ratings.reduce((sum, rating) => sum + rating.rating, 0);
+      const averageRating = totalRating / ratings.length;
+
+      await User.findByIdAndUpdate(userId, {
+        averageRating: Math.round(averageRating * 100) / 100,
+        totalRatings: ratings.length
+      });
+    } else {
+      await User.findByIdAndUpdate(userId, {
+        averageRating: 0,
+        totalRatings: 0
+      });
+    }
+  } catch (err) {
+    console.error('Error updating user rating:', err);
+  }
+}
+
+// Rutas
 router.post('/', auth, validateRating, handleValidationErrors, rateExchange);
-
-/**
- * @swagger
- * /ratings/user/{userId}:
- *   get:
- *     summary: Obtener calificaciones recibidas por un usuario
- *     tags: [Ratings]
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del usuario
- *     responses:
- *       200:
- *         description: Lista de calificaciones del usuario
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Rating'
- */
 router.get('/user/:userId', getUserRatings);
-
-/**
- * @swagger
- * /ratings/my-ratings:
- *   get:
- *     summary: Obtener calificaciones hechas por el usuario autenticado
- *     tags: [Ratings]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de mis calificaciones
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Rating'
- */
 router.get('/my-ratings', auth, getMyRatings);
 
-/**
- * @swagger
- * /ratings/exchange/{exchangeId}:
- *   get:
- *     summary: Obtener calificaciones de un intercambio específico
- *     tags: [Ratings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: exchangeId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID del intercambio
- *     responses:
- *       200:
- *         description: Calificaciones del intercambio
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Rating'
- */
-router.get('/exchange/:exchangeId', auth, getExchangeRatings);
-
-/**
- * @swagger
- * /ratings/{id}:
- *   put:
- *     summary: Actualizar una calificación
- *     tags: [Ratings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de la calificación
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               rating:
- *                 type: integer
- *                 minimum: 1
- *                 maximum: 5
- *               comment:
- *                 type: string
- *                 maxLength: 300
- *     responses:
- *       200:
- *         description: Calificación actualizada
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Rating'
- *       401:
- *         description: No autorizado
- *       404:
- *         description: Calificación no encontrada
- */
-router.put('/:id', auth, updateRating);
-
-/**
- * @swagger
- * /ratings/{id}:
- *   delete:
- *     summary: Eliminar una calificación
- *     tags: [Ratings]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de la calificación
- *     responses:
- *       200:
- *         description: Calificación eliminada exitosamente
- *       401:
- *         description: No autorizado
- *       404:
- *         description: Calificación no encontrada
- */
-router.delete('/:id', auth, deleteRating);
-
-export default router;
+module.exports = router;
