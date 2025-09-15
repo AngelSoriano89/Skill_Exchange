@@ -9,6 +9,7 @@ import RegisterPage from './pages/Auth/RegisterPage';
 import LoginPage from './pages/Auth/LoginPage';
 import Dashboard from './pages/App/Dashboard';
 import ProfilePage from './pages/App/ProfilePage';
+import EditProfile from './pages/profile/EditProfile';
 import SearchPage from './pages/App/SearchPage';
 import UserContactPage from './pages/Exchange/UserContactPage';
 import ProtectedRoute from './components/Common/ProtectedRoute';
@@ -37,6 +38,15 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Ruta para editar perfil */}
+            <Route 
+              path="/profile/edit" 
+              element={
+                <ProtectedRoute>
+                  <EditProfile />
                 </ProtectedRoute>
               } 
             />

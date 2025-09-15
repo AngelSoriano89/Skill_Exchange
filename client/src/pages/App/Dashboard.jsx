@@ -149,6 +149,43 @@ const Dashboard = () => {
     );
   };
 
+  const handleQuickContact = (exchange, contactType) => {
+    const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
+    
+    if (contactType === 'email') {
+      const subject = encodeURIComponent('Intercambio de Habilidades - Skill Exchange');
+      const body = encodeURIComponent(`¡Hola ${otherUser.name}!
+
+Te contacto sobre nuestro intercambio de habilidades aceptado.
+
+📚 Habilidades que me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Habilidades que te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+¿Cuándo podríamos empezar con nuestras sesiones?
+
+Saludos,
+${user.name}`);
+
+      window.location.href = `mailto:${otherUser.email}?subject=${subject}&body=${body}`;
+    } else if (contactType === 'whatsapp') {
+      if (!otherUser.phone) {
+        alert('Este usuario no ha proporcionado un número de teléfono.');
+        return;
+      }
+      
+      const cleanPhone = otherUser.phone.replace(/\D/g, '');
+      const message = encodeURIComponent(`¡Hola ${otherUser.name}! 👋
+
+Sobre nuestro intercambio en Skill Exchange:
+📚 Me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+¿Cuándo podemos comenzar? 😊`);
+
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -178,15 +215,6 @@ const Dashboard = () => {
               <p className="text-gray-600 text-lg">
                 Aquí tienes un resumen de tu actividad reciente en Skill Exchange
               </p>
-            </div>
-            <div className="mt-4 md:mt-0">
-              <Link 
-                to="/search" 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 inline-flex items-center"
-              >
-                <i className="fas fa-search mr-2"></i>
-                Buscar Intercambios
-              </Link>
             </div>
           </div>
         </div>
@@ -344,7 +372,7 @@ const Dashboard = () => {
                     const otherUser = isReceived ? exchange.sender : exchange.recipient;
                     
                     return (
-                      <div key={exchange._id} className="bg-gray-50 rounded-lg p-4">
+                      <div key={exchange._id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                         <div className="flex items-start space-x-4">
                           <div className="flex-shrink-0">
                             {renderAvatarWithFallback(otherUser)}
@@ -361,19 +389,45 @@ const Dashboard = () => {
                             <div className="text-sm text-gray-600 mb-2">
                               <span className="font-medium">Ofrece:</span> {exchange.skills_to_offer.join(', ')}
                             </div>
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="text-sm text-gray-600 mb-3">
                               <span className="font-medium">Quiere:</span> {exchange.skills_to_learn.join(', ')}
                             </div>
                             
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-gray-500">{formatDate(exchange.date)}</span>
+                              
+                              {/* Botones de contacto mejorados */}
                               {exchange.status === 'accepted' && (
-                                <Link 
-                                  to={`/exchange/${exchange._id}/contact`}
-                                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700 transition-colors"
-                                >
-                                  Contactar
-                                </Link>
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleQuickContact(exchange, 'email')}
+                                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors flex items-center"
+                                    title="Enviar Email"
+                                  >
+                                    <i className="fas fa-envelope mr-1"></i>
+                                    Email
+                                  </button>
+                                  
+                                  {otherUser.phone && (
+                                    <button
+                                      onClick={() => handleQuickContact(exchange, 'whatsapp')}
+                                      className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition-colors flex items-center"
+                                      title="Enviar WhatsApp"
+                                    >
+                                      <i className="fab fa-whatsapp mr-1"></i>
+                                      WhatsApp
+                                    </button>
+                                  )}
+                                  
+                                  <Link 
+                                    to={`/exchange/${exchange._id}/contact`}
+                                    className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-full hover:bg-purple-700 transition-colors flex items-center"
+                                    title="Ver detalles completos"
+                                  >
+                                    <i className="fas fa-info-circle mr-1"></i>
+                                    Detalles
+                                  </Link>
+                                </div>
                               )}
                             </div>
                           </div>

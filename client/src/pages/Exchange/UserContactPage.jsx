@@ -11,6 +11,7 @@ const UserContactPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completing, setCompleting] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   useEffect(() => {
     if (user && exchangeId) {
@@ -34,6 +35,8 @@ const UserContactPage = () => {
     setCompleting(true);
     try {
       await api.put(`/exchanges/complete/${exchangeId}`);
+      setShowCompleteModal(false);
+      // Mostrar mensaje de éxito
       alert('¡Intercambio marcado como completado exitosamente! 🎉');
       navigate('/dashboard');
     } catch (err) {
@@ -48,33 +51,6 @@ const UserContactPage = () => {
     if (!avatarPath) return null;
     if (avatarPath.startsWith('http')) return avatarPath;
     return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatar = (userData) => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${userData.name}`}
-          className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className="w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg">
-        {userData.name?.charAt(0).toUpperCase() || 'U'}
-      </div>
-    );
   };
 
   const renderAvatarWithFallback = (userData) => {
@@ -104,6 +80,96 @@ const UserContactPage = () => {
       </div>
     );
   };
+
+  const handleSendEmail = (otherUser) => {
+    const subject = encodeURIComponent('Intercambio de Habilidades - Skill Exchange');
+    const body = encodeURIComponent(`¡Hola ${otherUser.name}!
+
+Te contacto sobre nuestro intercambio de habilidades aceptado en Skill Exchange.
+
+📚 Habilidades que me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Habilidades que te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+Me gustaría coordinar nuestras sesiones de intercambio. ¿Cuál sería un buen momento para ti?
+
+¡Estoy emocionado/a de comenzar este intercambio de conocimientos!
+
+Saludos,
+${user.name}`);
+
+    const mailtoLink = `mailto:${otherUser.email}?subject=${subject}&body=${body}`;
+    window.location.href = mailtoLink;
+  };
+
+  const handleSendWhatsApp = (otherUser) => {
+    if (!otherUser.phone) {
+      alert('Este usuario no ha proporcionado un número de teléfono.');
+      return;
+    }
+
+    // Limpiar el número de teléfono (quitar espacios, guiones, etc.)
+    const cleanPhone = otherUser.phone.replace(/\D/g, '');
+    
+    const message = encodeURIComponent(`¡Hola ${otherUser.name}! 👋
+
+Te contacto desde Skill Exchange sobre nuestro intercambio de habilidades aceptado.
+
+📚 Me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+¿Cuándo podríamos comenzar con nuestras sesiones? 😊`);
+
+    const whatsappLink = `https://wa.me/${cleanPhone}?text=${message}`;
+    window.open(whatsappLink, '_blank');
+  };
+
+  const CompleteExchangeModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-check-circle text-green-600 text-2xl"></i>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              ¿Completar Intercambio?
+            </h3>
+            <p className="text-gray-600">
+              ¿Estás seguro de que han terminado exitosamente el intercambio de habilidades? 
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setShowCompleteModal(false)}
+              className="btn-outline-secondary flex-1"
+              disabled={completing}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleCompleteExchange}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex-1"
+              disabled={completing}
+            >
+              {completing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
+                  Completando...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-check mr-2"></i>
+                  Sí, Completar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -168,11 +234,11 @@ const UserContactPage = () => {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-check-circle text-white text-2xl"></i>
+                <i className="fas fa-handshake text-white text-2xl"></i>
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Intercambio Aceptado!</h1>
               <p className="text-gray-600 text-lg">
-                Ahora pueden contactarse directamente para coordinar su intercambio de habilidades.
+                Es hora de conectar y comenzar tu intercambio de habilidades
               </p>
             </div>
 
@@ -185,19 +251,30 @@ const UserContactPage = () => {
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{otherUser.name}</h3>
                 <p className="text-gray-600 mb-4">{otherUser.email}</p>
                 
-                {otherUser.phone && (
-                  <div className="flex items-center justify-center text-gray-600 mb-2">
-                    <i className="fas fa-phone text-green-500 mr-2"></i>
-                    <span>{otherUser.phone}</span>
-                  </div>
-                )}
-                
-                {otherUser.location && (
-                  <div className="flex items-center justify-center text-gray-600">
-                    <i className="fas fa-map-marker-alt text-red-500 mr-2"></i>
-                    <span>{otherUser.location}</span>
-                  </div>
-                )}
+                <div className="space-y-2 mb-6">
+                  {otherUser.phone && (
+                    <div className="flex items-center justify-center text-gray-600">
+                      <i className="fas fa-phone text-green-500 mr-2"></i>
+                      <span className="text-sm">{otherUser.phone}</span>
+                    </div>
+                  )}
+                  
+                  {otherUser.location && (
+                    <div className="flex items-center justify-center text-gray-600">
+                      <i className="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                      <span className="text-sm">{otherUser.location}</span>
+                    </div>
+                  )}
+
+                  {otherUser.experience && (
+                    <div className="flex items-center justify-center">
+                      <span className="badge-warning text-xs">
+                        <i className="fas fa-star mr-1"></i>
+                        {otherUser.experience}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Exchange Details */}
@@ -211,11 +288,11 @@ const UserContactPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <h5 className="text-sm font-semibold text-green-700 mb-2">
-                        <i className="fas fa-hand-holding mr-2"></i>
-                        Habilidades ofrecidas:
+                        <i className="fas fa-graduation-cap mr-2"></i>
+                        Tú aprenderás:
                       </h5>
                       <div className="flex flex-wrap gap-2">
-                        {exchange.skills_to_offer.map((skill, index) => (
+                        {exchange.skills_to_learn.map((skill, index) => (
                           <span key={index} className="badge-success text-xs">
                             {skill}
                           </span>
@@ -225,11 +302,11 @@ const UserContactPage = () => {
                     
                     <div>
                       <h5 className="text-sm font-semibold text-blue-700 mb-2">
-                        <i className="fas fa-graduation-cap mr-2"></i>
-                        Habilidades solicitadas:
+                        <i className="fas fa-hand-holding mr-2"></i>
+                        Tú enseñarás:
                       </h5>
                       <div className="flex flex-wrap gap-2">
-                        {exchange.skills_to_learn.map((skill, index) => (
+                        {exchange.skills_to_offer.map((skill, index) => (
                           <span key={index} className="badge-info text-xs">
                             {skill}
                           </span>
@@ -256,72 +333,76 @@ const UserContactPage = () => {
                   <div className="flex items-start">
                     <i className="fas fa-lightbulb text-yellow-500 text-xl mr-3 mt-1"></i>
                     <div>
-                      <h4 className="font-bold text-gray-900 mb-2">Consejos para un intercambio exitoso:</h4>
-                      <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• Establezcan horarios y métodos de comunicación claros</li>
-                        <li>• Definan objetivos específicos para cada sesión</li>
-                        <li>• Sean pacientes y mantengan una actitud positiva</li>
-                        <li>• Una vez completado, no olviden marcar el intercambio como finalizado</li>
+                      <h4 className="font-bold text-gray-900 mb-2">¡Hora de conectar!</h4>
+                      <p className="text-sm text-gray-700 mb-3">
+                        Usa los botones de abajo para contactar con {otherUser.name} y coordinar vuestras sesiones de intercambio.
+                      </p>
+                      <ul className="text-xs text-gray-600 space-y-1">
+                        <li>📧 <strong>Email:</strong> Para conversaciones detalladas y planificación</li>
+                        <li>📱 <strong>WhatsApp:</strong> Para comunicación rápida y coordinación</li>
+                        <li>✅ <strong>Completar:</strong> Cuando hayan terminado exitosamente el intercambio</li>
                       </ul>
                     </div>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <a 
-                    href={`mailto:${otherUser.email}?subject=Intercambio de Habilidades - Skill Exchange&body=¡Hola ${otherUser.name}! Te contacto sobre nuestro intercambio de habilidades aceptado en Skill Exchange.%0A%0AHabilidades que ofreceré: ${exchange.skills_to_offer.join(', ')}%0AHabilidades que me enseñarás: ${exchange.skills_to_learn.join(', ')}%0A%0A¡Hablemos para coordinar nuestras sesiones!%0A%0ASaludos`}
-                    className="btn-primary flex-1 text-center"
-                  >
-                    <i className="fas fa-envelope mr-2"></i>
-                    Enviar Email
-                  </a>
-                  
-                  {otherUser.phone && (
-                    <a 
-                      href={`https://wa.me/${otherUser.phone.replace(/\D/g, '')}?text=¡Hola ${otherUser.name}! Te contacto sobre nuestro intercambio de habilidades en Skill Exchange.`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-success flex-1 text-center"
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      onClick={() => handleSendEmail(otherUser)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
                     >
-                      <i className="fab fa-whatsapp mr-2"></i>
-                      WhatsApp
-                    </a>
-                  )}
-                  
-                  <button
-                    onClick={handleCompleteExchange}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex-1"
-                    disabled={completing}
-                  >
-                    {completing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline-block"></div>
-                        Marcando como completado...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-check-circle mr-2"></i>
-                        Marcar como Completado
-                      </>
-                    )}
-                  </button>
-                </div>
+                      <i className="fas fa-envelope text-lg mr-3"></i>
+                      <div className="text-left">
+                        <div className="font-semibold">Enviar Email</div>
+                        <div className="text-xs opacity-75">Planificación detallada</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleSendWhatsApp(otherUser)}
+                      className="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center"
+                      disabled={!otherUser.phone}
+                    >
+                      <i className="fab fa-whatsapp text-lg mr-3"></i>
+                      <div className="text-left">
+                        <div className="font-semibold">
+                          {otherUser.phone ? 'Enviar WhatsApp' : 'Sin WhatsApp'}
+                        </div>
+                        <div className="text-xs opacity-75">
+                          {otherUser.phone ? 'Comunicación rápida' : 'No disponible'}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
 
-                <div className="text-center mt-6">
-                  <button 
-                    onClick={() => navigate('/dashboard')}
-                    className="btn-outline-secondary"
+                  <button
+                    onClick={() => setShowCompleteModal(true)}
+                    className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
-                    <i className="fas fa-arrow-left mr-2"></i>
-                    Volver al Dashboard
+                    <i className="fas fa-check-circle mr-2"></i>
+                    Marcar Intercambio como Completado
                   </button>
+
+                  <div className="text-center mt-6">
+                    <button 
+                      onClick={() => navigate('/dashboard')}
+                      className="btn-outline-secondary"
+                    >
+                      <i className="fas fa-arrow-left mr-2"></i>
+                      Volver al Dashboard
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación para completar */}
+      {showCompleteModal && <CompleteExchangeModal />}
     </div>
   );
 };
