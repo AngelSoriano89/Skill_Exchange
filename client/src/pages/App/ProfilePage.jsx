@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import ExchangeRequestModal from '../Exchange/ExchangeRequestModal';
 import api from '../../api/api';
 
 const ProfilePage = () => {
@@ -12,7 +11,6 @@ const ProfilePage = () => {
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showExchangeModal, setShowExchangeModal] = useState(false);
   const [exchanges, setExchanges] = useState([]);
 
   const profileId = id || currentUser?._id;
@@ -62,12 +60,14 @@ const ProfilePage = () => {
     }
   };
 
+  // CORREGIDO: Navegar a una nueva página en lugar de mostrar modal
   const handleSendRequest = () => {
     if (!currentUser) {
       navigate('/login');
       return;
     }
-    setShowExchangeModal(true);
+    // Navegar a una nueva página de solicitud de intercambio
+    navigate(`/exchange/request/${profileId}`);
   };
 
   const handleEditProfile = () => {
@@ -427,14 +427,6 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
-
-      {/* Modal de intercambio */}
-      {showExchangeModal && (
-        <ExchangeRequestModal
-          onClose={() => setShowExchangeModal(false)}
-          recipient={profileUser}
-        />
-      )}
     </div>
   );
 };

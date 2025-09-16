@@ -12,6 +12,7 @@ import ProfilePage from './pages/App/ProfilePage';
 import EditProfile from './pages/profile/EditProfile';
 import SearchPage from './pages/App/SearchPage';
 import UserContactPage from './pages/Exchange/UserContactPage';
+import ExchangeRequestPage from './pages/Exchange/ExchangeRequestPage';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 
 const App = () => {
@@ -72,6 +73,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <UserContactPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/exchange/request/:userId" 
+              element={
+                <ProtectedRoute>
+                  <ExchangeRequestPage />
                 </ProtectedRoute>
               } 
             />

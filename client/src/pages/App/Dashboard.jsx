@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate(); // Agregado para navegación programática
   const [pendingRequests, setPendingRequests] = useState([]);
   const [myExchanges, setMyExchanges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,94 +62,7 @@ const Dashboard = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      'pending': 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium',
-      'accepted': 'bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium',
-      'rejected': 'bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium',
-      'completed': 'bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium'
-    };
-    
-    const className = statusMap[status] || 'bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium';
-    const text = status === 'pending' ? 'Pendiente' : 
-                 status === 'accepted' ? 'Aceptado' : 
-                 status === 'rejected' ? 'Rechazado' : 
-                 status === 'completed' ? 'Completado' : status;
-    
-    return <span className={className}>{text}</span>;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatar = (userData, sizeClasses = 'w-10 h-10') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${userData.name}`}
-          className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className={`${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
-        {userData.name?.charAt(0).toUpperCase() || 'U'}
-      </div>
-    );
-  };
-
-  const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    return (
-      <div className="relative">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt={`Avatar de ${userData.name}`}
-            className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        )}
-        <div 
-          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
-        >
-          {userData.name?.charAt(0).toUpperCase() || 'U'}
-        </div>
-      </div>
-    );
-  };
-
+  // Función para manejar contacto directo desde el dashboard
   const handleQuickContact = (exchange, contactType) => {
     const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
     
@@ -184,6 +98,72 @@ Sobre nuestro intercambio en Skill Exchange:
 
       window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
     }
+  };
+
+  // Función para navegar al perfil (CORREGIDA)
+  const handleViewProfile = (userId) => {
+    navigate(`/profile/${userId}`);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'pending': 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium',
+      'accepted': 'bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium',
+      'rejected': 'bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium',
+      'completed': 'bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium'
+    };
+    
+    const className = statusMap[status] || 'bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium';
+    const text = status === 'pending' ? 'Pendiente' : 
+                 status === 'accepted' ? 'Aceptado' : 
+                 status === 'rejected' ? 'Rechazado' : 
+                 status === 'completed' ? 'Completado' : status;
+    
+    return <span className={className}>{text}</span>;
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getAvatarUrl = (avatarPath) => {
+    if (!avatarPath) return null;
+    if (avatarPath.startsWith('http')) return avatarPath;
+    return `http://localhost:5000${avatarPath}`;
+  };
+
+  const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
+    if (!userData) return null;
+    
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
+    
+    return (
+      <div className="relative">
+        {avatarUrl && (
+          <img
+            src={avatarUrl}
+            alt={`Avatar de ${userData.name}`}
+            className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        )}
+        <div 
+          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
+        >
+          {userData.name?.charAt(0).toUpperCase() || 'U'}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -271,7 +251,7 @@ Sobre nuestro intercambio en Skill Exchange:
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Solicitudes Recibidas */}
+          {/* Solicitudes Recibidas - CORREGIDAS */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -328,12 +308,16 @@ Sobre nuestro intercambio en Skill Exchange:
                             </div>
                           </div>
                           
-                          <button 
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
-                            onClick={() => setSelectedRequest(request)}
-                          >
-                            Ver detalles completos →
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            {/* CORREGIDO: Usar navigate en lugar de target="_blank" */}
+                            
+                            <button 
+                              className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              Ver detalles completos →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -343,7 +327,7 @@ Sobre nuestro intercambio en Skill Exchange:
             </div>
           </div>
 
-          {/* Mis Intercambios */}
+          {/* Mis Intercambios - MEJORADO */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -516,16 +500,7 @@ Sobre nuestro intercambio en Skill Exchange:
                   </div>
                   <h5 className="font-bold text-gray-900 mb-2">{selectedRequest.sender.name}</h5>
                   <p className="text-gray-600 text-sm mb-4">{selectedRequest.sender.email}</p>
-                  
-                  <Link 
-                    to={`/profile/${selectedRequest.sender._id}`}
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm w-full mb-4 inline-block"
-                    target="_blank"
-                  >
-                    <i className="fas fa-user mr-2"></i>
-                    Ver Perfil Completo
-                  </Link>
-                  
+                                    
                   <div className="text-xs text-gray-500">
                     <i className="fas fa-clock mr-1"></i>
                     {formatDate(selectedRequest.date)}
