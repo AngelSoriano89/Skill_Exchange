@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const res = await api.get('/users/me');
+      const res = await api.get('/auth/me');
       setUser(res.data);
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       
       // Obtener datos del usuario después del login
-      const userRes = await api.get('/users/me');
+      const userRes = await api.get('/auth/me');
       setUser(userRes.data);
       
       return { success: true };
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       
       // Obtener datos del usuario después del registro
-      const userRes = await api.get('/users/me');
+      const userRes = await api.get('/auth/me');
       setUser(userRes.data);
       
       return { success: true };

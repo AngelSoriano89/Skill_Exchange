@@ -45,7 +45,6 @@
     "build-tailwind": "tailwindcss -i ./src/input.css -o ./dist/output.css",
     "watch-tailwind": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
   },
-  "proxy": "http://localhost:5000",
   "eslintConfig": {
     "extends": [
       "react-app",
