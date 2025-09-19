@@ -12,7 +12,11 @@ const getBaseURL = () => {
 };
 
 const api = axios.create({
+<<<<<<< HEAD
   baseURL: getBaseURL(),
+=======
+  baseURL: '/api',
+>>>>>>> origin/dev
   headers: {
     'Content-Type': 'application/json',
   },
