@@ -1,78 +1,189 @@
-/* App.css - Estilos adicionales para la aplicación */
+/* ==========================================================================
+  BASE STYLES - Tailwind Components
+   ========================================================================== */
 
-/* Variables CSS personalizadas */
-:root {
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-200: #bfdbfe;
-  --primary-300: #93c5fd;
-  --primary-400: #60a5fa;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
-  --primary-800: #1e40af;
-  --primary-900: #1e3a8a;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* ✅ Botones personalizados */
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
+
+  .btn-outline-primary {
+    @apply bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .btn-outline-secondary {
+    @apply bg-transparent border-2 border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
+
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  }
+
+  .btn-warning {
+    @apply bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+
+  /* ✅ Cards personalizadas */
+  .card {
+    @apply bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  /* ✅ Badges personalizados */
+  .badge-primary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
+  }
+
+  .badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800;
+  }
+
+  .badge-info {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800;
+  }
+
+  .badge-secondary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800;
+  }
+
+  /* ✅ Texto con gradiente */
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  /* ✅ Efectos hover */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-2;
+  }
 }
 
-/* Clases de utilidad personalizadas */
-.gradient-text {
-  background: linear-gradient(135deg, var(--primary-600), #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+/* ==========================================================================
+  CUSTOM UTILITIES
+   ========================================================================== */
+
+@layer utilities {
+  /* ✅ Line clamp para texto */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* ✅ Scrollbar personalizado */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 163 175) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(156 163 175);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(107 114 128);
+  }
+
+  /* ✅ Glass morphism effect */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  /* ✅ Animaciones personalizadas */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounceGentle 2s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* ✅ Estados de loading */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  .skeleton-text {
+    @apply h-4 bg-gray-200 rounded animate-pulse;
+  }
+
+  .skeleton-circle {
+    @apply rounded-full bg-gray-200 animate-pulse;
+  }
 }
 
-.card {
-  @apply bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200;
+/* ==========================================================================
+  KEYFRAMES PARA ANIMACIONES
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.card-hover {
-  @apply hover:shadow-lg hover:-translate-y-1 transition-all duration-300;
-}
-
-.btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 inline-flex items-center justify-center;
-}
-
-.btn-secondary {
-  @apply bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center justify-center;
-}
-
-.btn-success {
-  @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 inline-flex items-center justify-center;
-}
-
-.btn-outline-primary {
-  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 inline-flex items-center justify-center;
-}
-
-.btn-outline-secondary {
-  @apply border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 inline-flex items-center justify-center;
-}
-
-.badge-primary {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
-}
-
-.badge-success {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800;
-}
-
-.badge-info {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
-}
-
-.badge-warning {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
-}
-
-.badge-danger {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800;
-}
-
-/* Animaciones personalizadas */
-@keyframes fade-in-up {
+@keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(30px);
@@ -83,366 +194,309 @@
   }
 }
 
-@keyframes bounce-gentle {
-  0%, 20%, 50%, 80%, 100% {
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
-  40% {
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes bounceGentle {
+  0%, 100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
     transform: translateY(-5px);
-  }
-  60% {
-    transform: translateY(-3px);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out forwards;
-}
-
-.animate-bounce-gentle {
-  animation: bounce-gentle 2s infinite;
-}
-
-.hover-lift {
-  transition: transform 0.2s ease-in-out;
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-}
-
-/* Utilidades para truncar texto */
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Estilos para scrollbars personalizados */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Responsive utilities adicionales */
-@media (max-width: 640px) {
-  .text-responsive {
-    font-size: 0.875rem;
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
   }
-  
-  .btn-responsive {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+  to {
+    transform: translateX(0);
   }
 }
 
-/* Estados de carga */
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
   }
-  100% {
-    background-position: -200% 0;
+  to {
+    transform: translateX(0);
   }
 }
 
-/* Estilos para formularios mejorados */
-.form-floating {
-  position: relative;
+/* ==========================================================================
+  RESPONSIVE UTILITIES
+   ========================================================================== */
+
+/* ✅ Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.form-floating input:focus ~ label,
-.form-floating input:not(:placeholder-shown) ~ label {
-  transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-  color: var(--primary-600);
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.form-floating label {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  padding: 0.75rem;
-  pointer-events: none;
-  border: 1px solid transparent;
-  transform-origin: 0 0;
-  transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
-}
-
-/* Mejoras para accesibilidad */
-.focus\:outline-primary:focus {
-  outline: 2px solid var(--primary-500);
+/* ✅ Focus states for accessibility */
+.focus-visible:focus {
+  outline: 2px solid rgb(59 130 246);
   outline-offset: 2px;
 }
 
-/* Skip links para accesibilidad */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 6px;
-  background: var(--primary-600);
-  color: white;
-  padding: 8px;
-  text-decoration: none;
-  border-radius: 0 0 4px 4px;
-  z-index: 1000;
+/* ==========================================================================
+  COMPONENTES ESPECÍFICOS DE LA APP
+   ========================================================================== */
+
+/* ✅ Loading spinner personalizado */
+.loading-spinner {
+  @apply inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin;
 }
 
-.skip-link:focus {
-  top: 0;
+.loading-spinner-lg {
+  @apply inline-block w-8 h-8 border-2 border-current border-r-transparent rounded-full animate-spin;
 }
 
-/* Print styles */
+/* ✅ Toast notifications */
+.toast {
+  @apply fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 border-l-4 z-50 transform transition-transform duration-300;
+}
+
+.toast-success {
+  @apply border-green-500;
+}
+
+.toast-error {
+  @apply border-red-500;
+}
+
+.toast-warning {
+  @apply border-yellow-500;
+}
+
+.toast-info {
+  @apply border-blue-500;
+}
+
+/* ✅ Avatar components */
+.avatar {
+  @apply rounded-full object-cover border-2 border-white shadow-md;
+}
+
+.avatar-sm {
+  @apply w-8 h-8;
+}
+
+.avatar-md {
+  @apply w-12 h-12;
+}
+
+.avatar-lg {
+  @apply w-20 h-20;
+}
+
+.avatar-xl {
+  @apply w-32 h-32;
+}
+
+/* ✅ Form components */
+.form-input {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
+}
+
+.form-input-error {
+  @apply border-red-500 focus:ring-red-500;
+}
+
+.form-input-success {
+  @apply border-green-500 focus:ring-green-500;
+}
+
+.form-label {
+  @apply block text-sm font-semibold text-gray-700 mb-2;
+}
+
+.form-error {
+  @apply text-red-600 text-sm mt-1;
+}
+
+.form-help {
+  @apply text-gray-500 text-sm mt-1;
+}
+
+/* ✅ Status indicators */
+.status-online {
+  @apply w-3 h-3 bg-green-400 rounded-full;
+}
+
+.status-offline {
+  @apply w-3 h-3 bg-gray-400 rounded-full;
+}
+
+.status-busy {
+  @apply w-3 h-3 bg-red-400 rounded-full;
+}
+
+.status-away {
+  @apply w-3 h-3 bg-yellow-400 rounded-full;
+}
+
+/* ==========================================================================
+  DARK MODE SUPPORT (Preparado para futura implementación)
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-white;
+  }
+  
+  .dark-mode .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark-mode .form-input {
+    @apply bg-gray-800 border-gray-600 text-white;
+  }
+}
+
+/* ==========================================================================
+  PRINT STYLES
+   ========================================================================== */
+
 @media print {
   .no-print {
     display: none !important;
   }
   
-  .print-break-before {
-    page-break-before: always;
+  .print-only {
+    display: block !important;
   }
   
-  .print-break-after {
-    page-break-after: always;
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
   }
 }
 
-/* Botones de contacto específicos */
-.contact-button {
-  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105;
-}
+/* ==========================================================================
+  HIGH CONTRAST MODE SUPPORT
+   ========================================================================== */
 
-.contact-button-email {
-  @apply contact-button bg-blue-600 hover:bg-blue-700 text-white;
-}
-
-.contact-button-whatsapp {
-  @apply contact-button bg-green-600 hover:bg-green-700 text-white;
-}
-
-.contact-button-complete {
-  @apply contact-button bg-purple-600 hover:bg-purple-700 text-white;
-}
-
-.contact-button:disabled {
-  @apply opacity-50 cursor-not-allowed transform-none;
-}
-
-/* Cards de información de contacto */
-.contact-info-card {
-  @apply bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200;
-}
-
-.contact-tips-card {
-  @apply bg-yellow-50 border border-yellow-200 rounded-lg p-6;
-}
-
-/* Animaciones para elementos de contacto */
-.contact-slide-in {
-  animation: slideInFromBottom 0.4s ease-out forwards;
-}
-
-@keyframes slideInFromBottom {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Mejoras para los modales de confirmación */
-.modal-overlay-contact {
-  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content-contact {
-  @apply bg-white rounded-xl shadow-xl max-w-md w-full;
-  animation: modalSlideIn 0.3s ease-out forwards;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* Estilos para badges de estado mejorados */
-.status-badge {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-
-.status-badge-accepted {
-  @apply status-badge bg-green-100 text-green-800 border border-green-300;
-}
-
-.status-badge-pending {
-  @apply status-badge bg-yellow-100 text-yellow-800 border border-yellow-300;
-}
-
-.status-badge-completed {
-  @apply status-badge bg-blue-100 text-blue-800 border border-blue-300;
-}
-
-/* Efectos hover para tarjetas de intercambio */
-.exchange-card {
-  @apply bg-gray-50 rounded-lg p-4 transition-all duration-200;
-}
-
-.exchange-card:hover {
-  @apply bg-gray-100 transform translate-y-[-2px] shadow-md;
-}
-
-/* Estilos para información de usuario */
-.user-info-section {
-  @apply space-y-2 text-sm;
-}
-
-.user-info-item {
-  @apply flex items-center text-gray-600;
-}
-
-.user-info-icon {
-  @apply w-4 h-4 mr-2 flex-shrink-0;
-}
-
-/* Estilos responsive para botones de contacto */
-@media (max-width: 640px) {
-  .contact-buttons-mobile {
-    @apply flex flex-col space-y-3;
+@media (prefers-contrast: high) {
+  .btn-primary {
+    @apply border-2 border-blue-800;
   }
   
-  .contact-button-mobile {
-    @apply w-full py-3 px-4 text-base;
+  .card {
+    @apply border-2 border-gray-400;
   }
 }
 
-@media (min-width: 641px) {
-  .contact-buttons-desktop {
-    @apply grid grid-cols-2 gap-4;
+/* ==========================================================================
+  REDUCED MOTION SUPPORT
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-bounce-gentle,
+  .animate-pulse-slow,
+  .transition-all,
+  .transition-transform,
+  .transition-colors,
+  .hover-lift {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .loading-spinner,
+  .loading-spinner-lg {
+    animation: none !important;
+    border: 2px solid currentColor !important;
   }
 }
 
-/* Estilos para tooltips de contacto */
-.contact-tooltip {
-  @apply absolute z-10 px-2 py-1 text-xs text-white bg-gray-900 rounded-md opacity-0 pointer-events-none transition-opacity duration-200;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
+/* ==========================================================================
+  UTILITY CLASSES ADICIONALES
+   ========================================================================== */
+
+/* ✅ Text selection */
+::selection {
+  background: rgba(59, 130, 246, 0.2);
+  color: inherit;
 }
 
-.contact-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #1f2937 transparent transparent transparent;
+/* ✅ Focus ring for keyboard navigation */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(59 130 246);
 }
 
-.contact-button-group {
-  position: relative;
+/* ✅ Smooth scroll for entire page */
+html {
+  scroll-behavior: smooth;
 }
 
-.contact-button-group:hover .contact-tooltip {
-  @apply opacity-100;
+/* ✅ Remove default button styles */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
-/* Animaciones de carga para botones */
-.button-loading {
-  @apply relative overflow-hidden;
+/* ✅ Image optimization */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
-.button-loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: shimmer 1.5s infinite;
+/* ✅ Custom properties para colores de marca */
+:root {
+  --primary-50: rgb(239 246 255);
+  --primary-100: rgb(219 234 254);
+  --primary-200: rgb(191 219 254);
+  --primary-300: rgb(147 197 253);
+  --primary-400: rgb(96 165 250);
+  --primary-500: rgb(59 130 246);
+  --primary-600: rgb(37 99 235);
+  --primary-700: rgb(29 78 216);
+  --primary-800: rgb(30 64 175);
+  --primary-900: rgb(30 58 138);
 }
-
-@keyframes shimmer {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-
-/* Mejoras para la sección de skills */
-.skill-badge-container {
-  @apply flex flex-wrap gap-2 mt-2;
-}
-
-.skill-badge-learn {
-  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200;
-}
-
-.skill-badge-teach {
-  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200;
-}
-
-/* Estilos para mensajes de estado */
-.status-message {
-  @apply px-4 py-3 rounded-lg border-l-4;
-}
-
-.status-message-success {
-  @apply status-message bg-green-50 border-green-400 text-green-700;
-}
-
-.status-message-info {
-  @apply status-message bg-blue-50 border-blue-400 text-blue-700;
-}
-
-.status-message-warning {
-  @apply status-message bg-yellow-50 border-yellow-400 text-yellow-700;
-}
+/* ==========================================================================
+  END OF FILE
+   ========================================================================== */
