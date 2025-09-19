@@ -98,7 +98,8 @@ const EditProfile = () => {
   const removeAvatar = () => {
     setAvatar(null);
     setAvatarPreview('');
-    document.getElementById('avatar-input').value = '';
+    const fileInput = document.getElementById('avatar-input');
+    if (fileInput) fileInput.value = '';
   };
 
   const validateForm = () => {
@@ -169,10 +170,10 @@ const EditProfile = () => {
       
       setSuccess('¡Perfil actualizado exitosamente!');
       
-      // Redirigir después de 2 segundos
+      // Redirigir después de 1.5 segundos
       setTimeout(() => {
         navigate('/profile');
-      }, 2000);
+      }, 1500);
 
     } catch (err) {
       console.error('Error updating profile:', err);
@@ -182,20 +183,26 @@ const EditProfile = () => {
     }
   };
 
-  const renderAvatar = () => {
-    if (avatarPreview) {
-      return (
-        <img
-          src={avatarPreview}
-          alt="Avatar preview"
-          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-        />
-      );
-    }
-    
+  const renderAvatarWithFallback = () => {
     return (
-      <div className="w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-lg">
-        {formData.name.charAt(0).toUpperCase() || 'U'}
+      <div className="relative">
+        {avatarPreview && (
+          <img
+            src={avatarPreview}
+            alt="Avatar preview"
+            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        )}
+        <div 
+          className={`fallback-avatar w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl ${avatarPreview ? 'hidden' : 'flex'}`}
+        >
+          {formData.name.charAt(0).toUpperCase() || 'U'}
+        </div>
       </div>
     );
   };
@@ -225,16 +232,20 @@ const EditProfile = () => {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                <i className="fas fa-exclamation-triangle mr-2"></i>
-                {error}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 animate-fade-in-up">
+                <div className="flex items-center">
+                  <i className="fas fa-exclamation-triangle mr-2"></i>
+                  {error}
+                </div>
               </div>
             )}
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-                <i className="fas fa-check-circle mr-2"></i>
-                {success}
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 animate-fade-in-up">
+                <div className="flex items-center">
+                  <i className="fas fa-check-circle mr-2"></i>
+                  {success}
+                </div>
               </div>
             )}
 
@@ -244,11 +255,11 @@ const EditProfile = () => {
                 <div className="text-center">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Foto de perfil</h3>
                   <div className="relative inline-block mb-4">
-                    {renderAvatar()}
+                    {renderAvatarWithFallback()}
                     {avatarPreview && (
                       <button
                         type="button"
-                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
                         onClick={removeAvatar}
                       >
                         <i className="fas fa-times text-sm"></i>
@@ -267,6 +278,7 @@ const EditProfile = () => {
                       type="button"
                       onClick={() => document.getElementById('avatar-input').click()}
                       className="btn-outline-primary text-sm"
+                      disabled={loading}
                     >
                       <i className="fas fa-camera mr-2"></i>
                       {avatarPreview ? 'Cambiar foto' : 'Subir foto'}
@@ -291,7 +303,7 @@ const EditProfile = () => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                         required
                         disabled={loading}
                       />
@@ -308,7 +320,7 @@ const EditProfile = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                         placeholder="+1234567890"
                         disabled={loading}
                       />
@@ -325,7 +337,7 @@ const EditProfile = () => {
                         name="location"
                         value={formData.location}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                         placeholder="Ciudad, País"
                         disabled={loading}
                       />
@@ -341,7 +353,7 @@ const EditProfile = () => {
                         name="experience"
                         value={formData.experience}
                         onChange={handleChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                         disabled={loading}
                       >
                         {experienceLevels.map(level => (
@@ -362,7 +374,7 @@ const EditProfile = () => {
                       rows="4"
                       value={formData.bio}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                       placeholder="Cuéntanos sobre ti, tus intereses, experiencia y lo que te motiva a intercambiar habilidades..."
                       maxLength="500"
                       disabled={loading}
@@ -377,7 +389,7 @@ const EditProfile = () => {
               {/* Skills Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <label htmlFor="skills_to_offer" className="block text-sm font-semibold text-green-700 mb-2">
+                  <label htmlFor="skills_to_offer" className="block text-sm font-semibold text-green-700 mb-3">
                     <i className="fas fa-hand-holding mr-2"></i>
                     Habilidades que puedo enseñar
                   </label>
@@ -387,7 +399,7 @@ const EditProfile = () => {
                     rows="4"
                     value={formData.skills_to_offer}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                    className="w-full px-4 py-3 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors"
                     placeholder="JavaScript, React, Cocina italiana, Guitarra, Inglés..."
                     disabled={loading}
                   />
@@ -397,7 +409,7 @@ const EditProfile = () => {
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <label htmlFor="skills_to_learn" className="block text-sm font-semibold text-blue-700 mb-2">
+                  <label htmlFor="skills_to_learn" className="block text-sm font-semibold text-blue-700 mb-3">
                     <i className="fas fa-graduation-cap mr-2"></i>
                     Habilidades que quiero aprender
                   </label>
@@ -407,7 +419,7 @@ const EditProfile = () => {
                     rows="4"
                     value={formData.skills_to_learn}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors"
                     placeholder="Piano, Fotografía, Marketing digital, Francés, Yoga..."
                     disabled={loading}
                   />
@@ -430,7 +442,7 @@ const EditProfile = () => {
                     name="languages"
                     value={formData.languages}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                     placeholder="Español, Inglés, Francés..."
                     disabled={loading}
                   />
@@ -450,13 +462,39 @@ const EditProfile = () => {
                     name="interests"
                     value={formData.interests}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                     placeholder="Música, Deportes, Lectura, Viajes..."
                     disabled={loading}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Separa los intereses con comas
                   </p>
+                </div>
+              </div>
+
+              {/* Tips Section */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-8">
+                <h4 className="text-lg font-bold text-indigo-900 mb-3 flex items-center">
+                  <i className="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                  Consejos para un perfil exitoso
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-indigo-700">
+                  <div className="flex items-start">
+                    <i className="fas fa-check text-green-500 mr-2 mt-1"></i>
+                    <span>Usa una foto de perfil clara y profesional</span>
+                  </div>
+                  <div className="flex items-start">
+                    <i className="fas fa-check text-green-500 mr-2 mt-1"></i>
+                    <span>Escribe una biografía que muestre tu personalidad</span>
+                  </div>
+                  <div className="flex items-start">
+                    <i className="fas fa-check text-green-500 mr-2 mt-1"></i>
+                    <span>Sé específico con tus habilidades y nivel</span>
+                  </div>
+                  <div className="flex items-start">
+                    <i className="fas fa-check text-green-500 mr-2 mt-1"></i>
+                    <span>Incluye información de contacto actualizada</span>
+                  </div>
                 </div>
               </div>
 
@@ -468,8 +506,8 @@ const EditProfile = () => {
                   className="btn-outline-secondary flex-1"
                   disabled={loading}
                 >
-                  <i className="fas fa-times mr-2"></i>
-                  Cancelar
+                  <i className="fas fa-arrow-left mr-2"></i>
+                  Volver al perfil
                 </button>
                 <button 
                   type="submit"
