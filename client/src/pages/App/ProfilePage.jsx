@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import ExchangeRequestModal from '../Exchange/ExchangeRequestModal';
-import EditProfileModal from './EditProfileModal';
 import api from '../../api/api';
 
 const ProfilePage = () => {
@@ -13,8 +11,6 @@ const ProfilePage = () => {
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showExchangeModal, setShowExchangeModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [exchanges, setExchanges] = useState([]);
 
   const profileId = id || currentUser?._id;
@@ -27,7 +23,7 @@ const ProfilePage = () => {
         fetchExchangeHistory();
       }
     }
-  }, [profileId, currentUser]);
+  }, [profileId, currentUser, isOwnProfile]);
 
   const fetchUserProfile = async () => {
     try {
@@ -64,24 +60,19 @@ const ProfilePage = () => {
     }
   };
 
+  // CORREGIDO: Navegar a una nueva página en lugar de mostrar modal
   const handleSendRequest = () => {
     if (!currentUser) {
       navigate('/login');
       return;
     }
-    setShowExchangeModal(true);
+    // Navegar a una nueva página de solicitud de intercambio
+    navigate(`/exchange/request/${profileId}`);
   };
 
   const handleEditProfile = () => {
-    setShowEditModal(true);
-  };
-
-  const handleProfileUpdated = (updatedUser) => {
-    setProfileUser(updatedUser);
-    setShowEditModal(false);
-    if (isOwnProfile && updateUser) {
-      updateUser(updatedUser);
-    }
+    // Navegar a la página de edición en lugar de abrir un modal
+    navigate('/profile/edit');
   };
 
   const getAvatarUrl = (avatarPath) => {
@@ -90,27 +81,30 @@ const ProfilePage = () => {
     return `http://localhost:5000${avatarPath}`;
   };
 
-  const renderAvatar = () => {
-    const avatarUrl = profileUser.avatar ? getAvatarUrl(profileUser.avatar) : null;
+  const renderAvatarWithFallback = (userData, sizeClasses = 'w-32 h-32') => {
+    if (!userData) return null;
     
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${profileUser.name}`}
-          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-xl"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
+    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
     
     return (
-      <div className="w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
-        {profileUser.name.charAt(0).toUpperCase()}
+      <div className="relative">
+        {avatarUrl && (
+          <img
+            src={avatarUrl}
+            alt={`Avatar de ${userData.name}`}
+            className={`${sizeClasses} rounded-full object-cover border-4 border-white shadow-xl`}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        )}
+        <div 
+          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl ${avatarUrl ? 'hidden' : 'flex'}`}
+        >
+          {userData.name?.charAt(0).toUpperCase() || 'U'}
+        </div>
       </div>
     );
   };
@@ -183,17 +177,14 @@ const ProfilePage = () => {
               <div className="card p-8 animate-fade-in-up">
                 <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
                   <div className="flex-shrink-0 text-center">
-                    {renderAvatar()}
-                    <div style={{ display: 'none' }} className="w-32 h-32 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl">
-                      {profileUser.name.charAt(0).toUpperCase()}
-                    </div>
+                    {renderAvatarWithFallback(profileUser)}
                     {isOwnProfile && (
                       <button
                         onClick={handleEditProfile}
                         className="mt-4 btn-outline-primary text-sm px-4 py-2"
                       >
-                        <i className="fas fa-camera mr-2"></i>
-                        Cambiar foto
+                        <i className="fas fa-edit mr-2"></i>
+                        Editar perfil
                       </button>
                     )}
                   </div>
@@ -308,9 +299,9 @@ const ProfilePage = () => {
                     Enseña
                   </h3>
                   {profileUser.skills_to_offer?.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                       {profileUser.skills_to_offer.map((skill, index) => (
-                        <span key={index} className="badge-success mr-2 mb-2">
+                        <span key={index} className="badge-success">
                           {skill}
                         </span>
                       ))}
@@ -327,9 +318,9 @@ const ProfilePage = () => {
                     Quiere aprender
                   </h3>
                   {profileUser.skills_to_learn?.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                       {profileUser.skills_to_learn.map((skill, index) => (
-                        <span key={index} className="badge-info mr-2 mb-2">
+                        <span key={index} className="badge-info">
                           {skill}
                         </span>
                       ))}
@@ -436,22 +427,6 @@ const ProfilePage = () => {
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      {showExchangeModal && (
-        <ExchangeRequestModal
-          onClose={() => setShowExchangeModal(false)}
-          recipient={profileUser}
-        />
-      )}
-
-      {showEditModal && (
-        <EditProfileModal
-          user={profileUser}
-          onClose={() => setShowEditModal(false)}
-          onProfileUpdated={handleProfileUpdated}
-        />
-      )}
     </div>
   );
 };

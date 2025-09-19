@@ -1,9 +1,10 @@
-// controllers/profileController.js
-import User from'../models/User.js';
-import Exchange from'../models/Exchange.js';
+const User = require('../models/User');
+const Exchange = require('../models/Exchange');
 
-// Obtener un perfil por ID
-export const getProfileById = async (req, res) => {
+// @route   GET api/profile/:id
+// @desc    Obtener un perfil por ID
+// @access  Public
+const getProfileById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -12,12 +13,17 @@ export const getProfileById = async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
     res.status(500).send('Error del servidor');
   }
 };
 
-// Actualizar el perfil del usuario autenticado
-export const updateProfile = async (req, res) => {
+// @route   PUT api/profile/:id
+// @desc    Actualizar el perfil del usuario autenticado
+// @access  Private
+const updateProfile = async (req, res) => {
   if (req.params.id !== req.user.id) {
     return res.status(401).json({ msg: 'No autorizado para actualizar este perfil' });
   }
@@ -60,8 +66,10 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// Añadir una nueva habilidad
-export const addSkill = async (req, res) => {
+// @route   POST api/profile/skills
+// @desc    Añadir una nueva habilidad
+// @access  Private
+const addSkill = async (req, res) => {
   // 1. Desestructurar las propiedades del cuerpo de la solicitud
   const { skill, type } = req.body;
 
@@ -97,10 +105,10 @@ export const addSkill = async (req, res) => {
   }
 };
 
+// @route   GET api/profile/:id/contact
 // @desc    Obtener información de contacto de un usuario para un intercambio aceptado
-// @route   GET /api/profile/:id/contact
 // @access  Private
-export const getContactInfo = async (req, res) => {
+const getContactInfo = async (req, res) => {
   try {
     const userToContact = await User.findById(req.params.id).select('name email phone');
 
@@ -111,8 +119,8 @@ export const getContactInfo = async (req, res) => {
     // Verificar si existe un intercambio aceptado entre los dos usuarios
     const acceptedExchange = await Exchange.findOne({
       $or: [
-        { requester: req.user.id, recipient: userToContact._id, status: 'accepted' },
-        { requester: userToContact._id, recipient: req.user.id, status: 'accepted' },
+        { sender: req.user.id, recipient: userToContact._id, status: 'accepted' },
+        { sender: userToContact._id, recipient: req.user.id, status: 'accepted' },
       ],
     });
 
@@ -126,6 +134,16 @@ export const getContactInfo = async (req, res) => {
     });
   } catch (err) {
     console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
     res.status(500).send('Error del servidor');
   }
+};
+
+module.exports = {
+  getProfileById,
+  updateProfile,
+  addSkill,
+  getContactInfo
 };

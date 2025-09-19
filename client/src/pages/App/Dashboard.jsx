@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate(); // Agregado para navegación programática
   const [pendingRequests, setPendingRequests] = useState([]);
   const [myExchanges, setMyExchanges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +25,14 @@ const Dashboard = () => {
         api.get('/exchanges/my-requests')
       ]);
       
-      setPendingRequests(pendingRes.data);
-      setMyExchanges(exchangesRes.data);
+      setPendingRequests(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+      setMyExchanges(Array.isArray(exchangesRes.data) ? exchangesRes.data : []);
+      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // En caso de error, también inicializa con arrays vacíos para evitar fallos.
+      setPendingRequests([]);
+      setMyExchanges([]);
     } finally {
       setLoading(false);
     }
@@ -61,6 +66,49 @@ const Dashboard = () => {
     }
   };
 
+  // Función para manejar contacto directo desde el dashboard
+  const handleQuickContact = (exchange, contactType) => {
+    const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
+    
+    if (contactType === 'email') {
+      const subject = encodeURIComponent('Intercambio de Habilidades - Skill Exchange');
+      const body = encodeURIComponent(`¡Hola ${otherUser.name}!
+
+Te contacto sobre nuestro intercambio de habilidades aceptado.
+
+📚 Habilidades que me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Habilidades que te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+¿Cuándo podríamos empezar con nuestras sesiones?
+
+Saludos,
+${user.name}`);
+
+      window.location.href = `mailto:${otherUser.email}?subject=${subject}&body=${body}`;
+    } else if (contactType === 'whatsapp') {
+      if (!otherUser.phone) {
+        alert('Este usuario no ha proporcionado un número de teléfono.');
+        return;
+      }
+      
+      const cleanPhone = otherUser.phone.replace(/\D/g, '');
+      const message = encodeURIComponent(`¡Hola ${otherUser.name}! 👋
+
+Sobre nuestro intercambio en Skill Exchange:
+📚 Me enseñarás: ${exchange.skills_to_learn.join(', ')}
+🎯 Te enseñaré: ${exchange.skills_to_offer.join(', ')}
+
+¿Cuándo podemos comenzar? 😊`);
+
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    }
+  };
+
+  // Función para navegar al perfil (CORREGIDA)
+  const handleViewProfile = (userId) => {
+    navigate(`/profile/${userId}`);
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       'pending': 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium',
@@ -92,33 +140,6 @@ const Dashboard = () => {
     if (!avatarPath) return null;
     if (avatarPath.startsWith('http')) return avatarPath;
     return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatar = (userData, sizeClasses = 'w-10 h-10') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${userData.name}`}
-          className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className={`${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
-        {userData.name?.charAt(0).toUpperCase() || 'U'}
-      </div>
-    );
   };
 
   const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
@@ -179,15 +200,6 @@ const Dashboard = () => {
                 Aquí tienes un resumen de tu actividad reciente en Skill Exchange
               </p>
             </div>
-            <div className="mt-4 md:mt-0">
-              <Link 
-                to="/search" 
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 inline-flex items-center"
-              >
-                <i className="fas fa-search mr-2"></i>
-                Buscar Intercambios
-              </Link>
-            </div>
           </div>
         </div>
 
@@ -243,7 +255,7 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Solicitudes Recibidas */}
+          {/* Solicitudes Recibidas - CORREGIDAS */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -300,12 +312,16 @@ const Dashboard = () => {
                             </div>
                           </div>
                           
-                          <button 
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
-                            onClick={() => setSelectedRequest(request)}
-                          >
-                            Ver detalles completos →
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            {/* CORREGIDO: Usar navigate en lugar de target="_blank" */}
+                            
+                            <button 
+                              className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                              onClick={() => setSelectedRequest(request)}
+                            >
+                              Ver detalles completos →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -315,7 +331,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Mis Intercambios */}
+          {/* Mis Intercambios - MEJORADO */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -344,7 +360,7 @@ const Dashboard = () => {
                     const otherUser = isReceived ? exchange.sender : exchange.recipient;
                     
                     return (
-                      <div key={exchange._id} className="bg-gray-50 rounded-lg p-4">
+                      <div key={exchange._id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                         <div className="flex items-start space-x-4">
                           <div className="flex-shrink-0">
                             {renderAvatarWithFallback(otherUser)}
@@ -361,19 +377,45 @@ const Dashboard = () => {
                             <div className="text-sm text-gray-600 mb-2">
                               <span className="font-medium">Ofrece:</span> {exchange.skills_to_offer.join(', ')}
                             </div>
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="text-sm text-gray-600 mb-3">
                               <span className="font-medium">Quiere:</span> {exchange.skills_to_learn.join(', ')}
                             </div>
                             
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-gray-500">{formatDate(exchange.date)}</span>
+                              
+                              {/* Botones de contacto mejorados */}
                               {exchange.status === 'accepted' && (
-                                <Link 
-                                  to={`/exchange/${exchange._id}/contact`}
-                                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-full hover:bg-green-700 transition-colors"
-                                >
-                                  Contactar
-                                </Link>
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleQuickContact(exchange, 'email')}
+                                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors flex items-center"
+                                    title="Enviar Email"
+                                  >
+                                    <i className="fas fa-envelope mr-1"></i>
+                                    Email
+                                  </button>
+                                  
+                                  {otherUser.phone && (
+                                    <button
+                                      onClick={() => handleQuickContact(exchange, 'whatsapp')}
+                                      className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition-colors flex items-center"
+                                      title="Enviar WhatsApp"
+                                    >
+                                      <i className="fab fa-whatsapp mr-1"></i>
+                                      WhatsApp
+                                    </button>
+                                  )}
+                                  
+                                  <Link 
+                                    to={`/exchange/${exchange._id}/contact`}
+                                    className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-full hover:bg-purple-700 transition-colors flex items-center"
+                                    title="Ver detalles completos"
+                                  >
+                                    <i className="fas fa-info-circle mr-1"></i>
+                                    Detalles
+                                  </Link>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -462,16 +504,7 @@ const Dashboard = () => {
                   </div>
                   <h5 className="font-bold text-gray-900 mb-2">{selectedRequest.sender.name}</h5>
                   <p className="text-gray-600 text-sm mb-4">{selectedRequest.sender.email}</p>
-                  
-                  <Link 
-                    to={`/profile/${selectedRequest.sender._id}`}
-                    className="border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm w-full mb-4 inline-block"
-                    target="_blank"
-                  >
-                    <i className="fas fa-user mr-2"></i>
-                    Ver Perfil Completo
-                  </Link>
-                  
+                                    
                   <div className="text-xs text-gray-500">
                     <i className="fas fa-clock mr-1"></i>
                     {formatDate(selectedRequest.date)}

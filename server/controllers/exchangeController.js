@@ -1,47 +1,114 @@
 const Exchange = require('../models/Exchange');
+const User = require('../models/User');
 
 // @route   POST api/exchanges/request
 // @desc    Crear una nueva solicitud de intercambio
 // @access  Private
 exports.createExchangeRequest = async (req, res) => {
-  const { recipientId, skills_to_offer, skills_to_learn, message } = req.body;
+  const { recipientId, skills_to_offer, skills_to_learn, message, skillId } = req.body;
 
   try {
+    // ✅ MEJORADO: Validaciones más robustas
+    if (!recipientId || !skills_to_offer || !skills_to_learn || !message) {
+      return res.status(400).json({ 
+        msg: 'Todos los campos son requeridos',
+        required: ['recipientId', 'skills_to_offer', 'skills_to_learn', 'message']
+      });
+    }
+
     // Verificar que no se envíe solicitud a sí mismo
     if (recipientId === req.user.id) {
       return res.status(400).json({ msg: 'No puedes enviarte una solicitud a ti mismo' });
     }
 
+    // ✅ AGREGADO: Verificar que el recipient existe
+    const recipient = await User.findById(recipientId);
+    if (!recipient) {
+      return res.status(404).json({ msg: 'El usuario destinatario no existe' });
+    }
+
+    // ✅ AGREGADO: Verificar que el recipient está activo
+    if (!recipient.isActive) {
+      return res.status(400).json({ msg: 'El usuario no está disponible para intercambios' });
+    }
+
     // Verificar si ya existe una solicitud pendiente entre estos usuarios
     const existingRequest = await Exchange.findOne({
-      sender: req.user.id,
-      recipient: recipientId,
-      status: 'pending'
+      $or: [
+        { sender: req.user.id, recipient: recipientId, status: 'pending' },
+        { sender: recipientId, recipient: req.user.id, status: 'pending' }
+      ]
     });
 
     if (existingRequest) {
-      return res.status(400).json({ msg: 'Ya tienes una solicitud pendiente con este usuario' });
+      return res.status(400).json({ 
+        msg: 'Ya existe una solicitud pendiente entre ustedes',
+        exchangeId: existingRequest._id
+      });
     }
+
+    // ✅ AGREGADO: Validar arrays de habilidades
+    const skillsToOffer = Array.isArray(skills_to_offer) ? skills_to_offer : [skills_to_offer];
+    const skillsToLearn = Array.isArray(skills_to_learn) ? skills_to_learn : [skills_to_learn];
+
+    if (skillsToOffer.length === 0 || skillsToLearn.length === 0) {
+      return res.status(400).json({ msg: 'Debe especificar al menos una habilidad para ofrecer y una para aprender' });
+    }
+
+    // ✅ AGREGADO: Limpiar y validar habilidades
+    const cleanSkillsToOffer = skillsToOffer
+      .map(skill => skill.trim())
+      .filter(skill => skill.length > 0)
+      .slice(0, 10); // Máximo 10 habilidades
+
+    const cleanSkillsToLearn = skillsToLearn
+      .map(skill => skill.trim())
+      .filter(skill => skill.length > 0)
+      .slice(0, 10); // Máximo 10 habilidades
+
+    // ✅ AGREGADO: Obtener metadatos de la petición
+    const metadata = {
+      ipAddress: req.ip || req.connection.remoteAddress || '',
+      userAgent: req.get('User-Agent') || '',
+      source: req.get('X-Client-Type') || 'web'
+    };
 
     const newExchange = new Exchange({
       sender: req.user.id,
       recipient: recipientId,
-      skills_to_offer,
-      skills_to_learn,
-      message,
+      skills_to_offer: cleanSkillsToOffer,
+      skills_to_learn: cleanSkillsToLearn,
+      message: message.trim(),
       status: 'pending',
+      skill: skillId || null, // Referencia opcional a skill específica
+      metadata
     });
 
     await newExchange.save();
     
-    // Poblar los datos del sender y recipient
-    await newExchange.populate('sender', 'name email');
-    await newExchange.populate('recipient', 'name email');
+    // ✅ OPTIMIZADO: Poblar en una sola operación
+    await newExchange.populate([
+      { path: 'sender', select: 'name email avatar' },
+      { path: 'recipient', select: 'name email avatar' }
+    ]);
     
-    res.json(newExchange);
+    res.status(201).json(newExchange);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error creating exchange request:', err.message);
+    
+    // ✅ MEJORADO: Manejo específico de errores de validación
+    if (err.name === 'ValidationError') {
+      const errors = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ 
+        msg: 'Errores de validación', 
+        errors 
+      });
+    }
+    
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -50,17 +117,48 @@ exports.createExchangeRequest = async (req, res) => {
 // @access  Private
 exports.getMyExchanges = async (req, res) => {
   try {
-    const exchanges = await Exchange.find({
-      $or: [{ sender: req.user.id }, { recipient: req.user.id }],
-    })
-      .populate('sender', 'name email skills_to_offer skills_to_learn')
-      .populate('recipient', 'name email skills_to_offer skills_to_learn')
-      .sort({ date: -1 });
+    const { status, limit = 50, page = 1 } = req.query;
+    
+    // ✅ AGREGADO: Construir filtro dinámico
+    const filter = {
+      $or: [{ sender: req.user.id }, { recipient: req.user.id }]
+    };
+    
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    // ✅ OPTIMIZADO: Usar agregación para mejor performance
+    const skip = (page - 1) * limit;
+    
+    const [exchanges, total] = await Promise.all([
+      Exchange.find(filter)
+        .populate('sender', 'name email skills_to_offer skills_to_learn avatar averageRating')
+        .populate('recipient', 'name email skills_to_offer skills_to_learn avatar averageRating')
+        .populate('skill', 'title category level')
+        .sort({ date: -1 })
+        .limit(parseInt(limit))
+        .skip(skip)
+        .lean(), // ✅ OPTIMIZACIÓN: usar lean() para mejor performance
       
-    res.json(exchanges);
+      Exchange.countDocuments(filter)
+    ]);
+      
+    res.json({
+      exchanges,
+      pagination: {
+        current: parseInt(page),
+        total,
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      }
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error getting exchanges:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -73,14 +171,19 @@ exports.getPendingRequests = async (req, res) => {
       recipient: req.user.id,
       status: 'pending'
     })
-      .populate('sender', 'name email skills_to_offer skills_to_learn')
-      .populate('recipient', 'name email')
-      .sort({ date: -1 });
+      .populate('sender', 'name email skills_to_offer skills_to_learn avatar averageRating totalExchanges')
+      .populate('recipient', 'name email avatar')
+      .populate('skill', 'title category level')
+      .sort({ date: -1 })
+      .lean(); // ✅ OPTIMIZACIÓN: usar lean()
       
     res.json(exchanges);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error getting pending requests:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -102,20 +205,51 @@ exports.acceptExchangeRequest = async (req, res) => {
     
     // Verificar que la solicitud esté pendiente
     if (exchange.status !== 'pending') {
-      return res.status(400).json({ msg: 'Esta solicitud ya no está pendiente' });
+      return res.status(400).json({ 
+        msg: 'Esta solicitud ya no está pendiente',
+        currentStatus: exchange.status
+      });
     }
     
-    exchange.status = 'accepted';
-    await exchange.save();
+    // ✅ AGREGADO: Usar transacción para atomicidad
+    const session = await Exchange.startSession();
+    session.startTransaction();
     
-    // Poblar los datos antes de enviar la respuesta
-    await exchange.populate('sender', 'name email');
-    await exchange.populate('recipient', 'name email');
+    try {
+      exchange.status = 'accepted';
+      exchange.contactInfo.isUnlocked = true;
+      exchange.contactInfo.unlockedAt = new Date();
+      
+      await exchange.save({ session });
+      
+      // ✅ AGREGADO: Actualizar contador de intercambios de ambos usuarios
+      await User.updateMany(
+        { _id: { $in: [exchange.sender, exchange.recipient] } },
+        { $inc: { totalExchanges: 1 } },
+        { session }
+      );
+      
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+    
+    // ✅ OPTIMIZADO: Poblar datos después de guardar
+    await exchange.populate([
+      { path: 'sender', select: 'name email avatar phone' },
+      { path: 'recipient', select: 'name email avatar phone' }
+    ]);
     
     res.json(exchange);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error accepting exchange:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -124,6 +258,8 @@ exports.acceptExchangeRequest = async (req, res) => {
 // @access  Private
 exports.rejectExchangeRequest = async (req, res) => {
   try {
+    const { reason } = req.body; // ✅ AGREGADO: Razón opcional del rechazo
+    
     const exchange = await Exchange.findById(req.params.id);
     
     if (!exchange) {
@@ -137,20 +273,34 @@ exports.rejectExchangeRequest = async (req, res) => {
     
     // Verificar que la solicitud esté pendiente
     if (exchange.status !== 'pending') {
-      return res.status(400).json({ msg: 'Esta solicitud ya no está pendiente' });
+      return res.status(400).json({ 
+        msg: 'Esta solicitud ya no está pendiente',
+        currentStatus: exchange.status
+      });
     }
     
     exchange.status = 'rejected';
+    
+    // ✅ AGREGADO: Guardar razón del rechazo en notas
+    if (reason && reason.trim()) {
+      exchange.exchangeDetails.notes = reason.trim();
+    }
+    
     await exchange.save();
     
-    // Poblar los datos antes de enviar la respuesta
-    await exchange.populate('sender', 'name email');
-    await exchange.populate('recipient', 'name email');
+    // ✅ OPTIMIZADO: Poblar datos después de guardar
+    await exchange.populate([
+      { path: 'sender', select: 'name email avatar' },
+      { path: 'recipient', select: 'name email avatar' }
+    ]);
     
     res.json(exchange);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error rejecting exchange:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -159,6 +309,8 @@ exports.rejectExchangeRequest = async (req, res) => {
 // @access  Private
 exports.completeExchange = async (req, res) => {
   try {
+    const { notes, duration } = req.body; // ✅ AGREGADO: Notas y duración opcionales
+    
     const exchange = await Exchange.findById(req.params.id);
     
     if (!exchange) {
@@ -172,20 +324,40 @@ exports.completeExchange = async (req, res) => {
     
     // Verificar que el intercambio esté aceptado
     if (exchange.status !== 'accepted') {
-      return res.status(400).json({ msg: 'Este intercambio no está en estado aceptado' });
+      return res.status(400).json({ 
+        msg: 'Este intercambio no está en estado aceptado',
+        currentStatus: exchange.status
+      });
     }
     
     exchange.status = 'completed';
+    exchange.exchangeDetails.endDate = new Date();
+    
+    // ✅ AGREGADO: Guardar notas adicionales
+    if (notes && notes.trim()) {
+      exchange.exchangeDetails.notes = notes.trim();
+    }
+    
+    // ✅ AGREGADO: Guardar duración si se proporciona
+    if (duration) {
+      exchange.exchangeDetails.estimatedDuration = duration;
+    }
+    
     await exchange.save();
     
-    // Poblar los datos antes de enviar la respuesta
-    await exchange.populate('sender', 'name email');
-    await exchange.populate('recipient', 'name email');
+    // ✅ OPTIMIZADO: Poblar datos después de guardar
+    await exchange.populate([
+      { path: 'sender', select: 'name email avatar' },
+      { path: 'recipient', select: 'name email avatar' }
+    ]);
     
     res.json(exchange);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error completing exchange:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
@@ -195,8 +367,10 @@ exports.completeExchange = async (req, res) => {
 exports.getExchangeById = async (req, res) => {
   try {
     const exchange = await Exchange.findById(req.params.id)
-      .populate('sender', 'name email phone skills_to_offer skills_to_learn')
-      .populate('recipient', 'name email phone skills_to_offer skills_to_learn');
+      .populate('sender', 'name email phone skills_to_offer skills_to_learn avatar averageRating location experience')
+      .populate('recipient', 'name email phone skills_to_offer skills_to_learn avatar averageRating location experience')
+      .populate('skill', 'title description category level averageRating')
+      .lean(); // ✅ OPTIMIZACIÓN: usar lean()
     
     if (!exchange) {
       return res.status(404).json({ msg: 'Intercambio no encontrado' });
@@ -207,9 +381,282 @@ exports.getExchangeById = async (req, res) => {
       return res.status(401).json({ msg: 'No tienes autorización para ver este intercambio' });
     }
     
+    // ✅ AGREGADO: Solo mostrar info de contacto si el intercambio está aceptado
+    if (exchange.status !== 'accepted' && exchange.status !== 'completed') {
+      // Remover información sensible para intercambios no aceptados
+      if (exchange.sender._id.toString() !== req.user.id) {
+        delete exchange.sender.phone;
+      }
+      if (exchange.recipient._id.toString() !== req.user.id) {
+        delete exchange.recipient.phone;
+      }
+    }
+    
     res.json(exchange);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.error('Error getting exchange by id:', err.message);
+    
+    // ✅ MEJORADO: Manejo específico de ObjectId inválido
+    if (err.kind === 'ObjectId' || err.name === 'CastError') {
+      return res.status(404).json({ msg: 'Intercambio no encontrado' });
+    }
+    
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
+};
+
+// ✅ AGREGADO: Función para obtener estadísticas de intercambios
+// @route   GET api/exchanges/stats
+// @desc    Obtener estadísticas de intercambios del usuario actual
+// @access  Private
+exports.getExchangeStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const stats = await Exchange.aggregate([
+      {
+        $match: {
+          $or: [
+            { sender: mongoose.Types.ObjectId(userId) },
+            { recipient: mongoose.Types.ObjectId(userId) }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // ✅ Formatear estadísticas
+    const formattedStats = {
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+      completed: 0,
+      total: 0
+    };
+    
+    stats.forEach(stat => {
+      formattedStats[stat._id] = stat.count;
+      formattedStats.total += stat.count;
+    });
+    
+    // ✅ AGREGADO: Estadísticas adicionales
+    const [sentRequests, receivedRequests] = await Promise.all([
+      Exchange.countDocuments({ sender: userId }),
+      Exchange.countDocuments({ recipient: userId })
+    ]);
+    
+    formattedStats.sent = sentRequests;
+    formattedStats.received = receivedRequests;
+    
+    // ✅ AGREGADO: Estadísticas de tiempo
+    const recentExchanges = await Exchange.countDocuments({
+      $or: [{ sender: userId }, { recipient: userId }],
+      date: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Últimos 30 días
+    });
+    
+    formattedStats.recent = recentExchanges;
+    
+    res.json(formattedStats);
+  } catch (err) {
+    console.error('Error getting exchange stats:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// ✅ AGREGADO: Función para cancelar intercambio (solo sender puede cancelar pending)
+// @route   DELETE api/exchanges/cancel/:id
+// @desc    Cancelar una solicitud de intercambio pendiente
+// @access  Private
+exports.cancelExchange = async (req, res) => {
+  try {
+    const exchange = await Exchange.findById(req.params.id);
+    
+    if (!exchange) {
+      return res.status(404).json({ msg: 'Intercambio no encontrado' });
+    }
+    
+    // Solo el sender puede cancelar y solo si está pending
+    if (exchange.sender.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Solo el emisor puede cancelar la solicitud' });
+    }
+    
+    if (exchange.status !== 'pending') {
+      return res.status(400).json({ 
+        msg: 'Solo se pueden cancelar solicitudes pendientes',
+        currentStatus: exchange.status
+      });
+    }
+    
+    // Eliminar el intercambio en lugar de cambiar status
+    await Exchange.findByIdAndDelete(req.params.id);
+    
+    res.json({ 
+      msg: 'Solicitud cancelada exitosamente',
+      deletedId: req.params.id
+    });
+  } catch (err) {
+    console.error('Error canceling exchange:', err.message);
+    
+    if (err.kind === 'ObjectId' || err.name === 'CastError') {
+      return res.status(404).json({ msg: 'Intercambio no encontrado' });
+    }
+    
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// ✅ AGREGADO: Función para obtener intercambios por filtros avanzados
+// @route   GET api/exchanges/search
+// @desc    Buscar intercambios con filtros avanzados
+// @access  Private
+exports.searchExchanges = async (req, res) => {
+  try {
+    const {
+      status,
+      skills,
+      dateFrom,
+      dateTo,
+      userId,
+      page = 1,
+      limit = 20,
+      sortBy = 'date',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Construir filtro base
+    const filter = {
+      $or: [{ sender: req.user.id }, { recipient: req.user.id }]
+    };
+
+    // Aplicar filtros adicionales
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    if (skills) {
+      const skillsArray = skills.split(',').map(s => s.trim());
+      filter.$or = [
+        ...filter.$or,
+        { skills_to_offer: { $in: skillsArray } },
+        { skills_to_learn: { $in: skillsArray } }
+      ];
+    }
+
+    if (dateFrom || dateTo) {
+      filter.date = {};
+      if (dateFrom) filter.date.$gte = new Date(dateFrom);
+      if (dateTo) filter.date.$lte = new Date(dateTo);
+    }
+
+    if (userId) {
+      filter.$or = [
+        { sender: userId, recipient: req.user.id },
+        { sender: req.user.id, recipient: userId }
+      ];
+    }
+
+    // Configurar paginación y ordenamiento
+    const skip = (page - 1) * limit;
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const [exchanges, total] = await Promise.all([
+      Exchange.find(filter)
+        .populate('sender', 'name email avatar averageRating')
+        .populate('recipient', 'name email avatar averageRating')
+        .populate('skill', 'title category level')
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      
+      Exchange.countDocuments(filter)
+    ]);
+
+    res.json({
+      exchanges,
+      pagination: {
+        current: parseInt(page),
+        total,
+        pages: Math.ceil(total / limit),
+        limit: parseInt(limit)
+      },
+      filters: {
+        status,
+        skills,
+        dateFrom,
+        dateTo,
+        userId
+      }
+    });
+  } catch (err) {
+    console.error('Error searching exchanges:', err.message);
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+};
+
+// ✅ AGREGADO: Función helper para verificar si un intercambio puede ser modificado
+exports.canModifyExchange = (exchange, userId, action) => {
+  const userIsParticipant = exchange.sender.toString() === userId || exchange.recipient.toString() === userId;
+  
+  if (!userIsParticipant) {
+    return { canModify: false, reason: 'No eres participante de este intercambio' };
+  }
+
+  switch (action) {
+    case 'accept':
+      if (exchange.recipient.toString() !== userId) {
+        return { canModify: false, reason: 'Solo el destinatario puede aceptar' };
+      }
+      if (exchange.status !== 'pending') {
+        return { canModify: false, reason: 'Solo se pueden aceptar solicitudes pendientes' };
+      }
+      break;
+
+    case 'reject':
+      if (exchange.recipient.toString() !== userId) {
+        return { canModify: false, reason: 'Solo el destinatario puede rechazar' };
+      }
+      if (exchange.status !== 'pending') {
+        return { canModify: false, reason: 'Solo se pueden rechazar solicitudes pendientes' };
+      }
+      break;
+
+    case 'cancel':
+      if (exchange.sender.toString() !== userId) {
+        return { canModify: false, reason: 'Solo el emisor puede cancelar' };
+      }
+      if (exchange.status !== 'pending') {
+        return { canModify: false, reason: 'Solo se pueden cancelar solicitudes pendientes' };
+      }
+      break;
+
+    case 'complete':
+      if (exchange.status !== 'accepted') {
+        return { canModify: false, reason: 'Solo se pueden completar intercambios aceptados' };
+      }
+      break;
+
+    default:
+      return { canModify: false, reason: 'Acción no válida' };
+  }
+
+  return { canModify: true };
 };
