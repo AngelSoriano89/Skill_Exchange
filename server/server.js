@@ -37,17 +37,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/skills', require('./routes/skillRoutes'));
 app.use('/api/exchanges', require('./routes/exchangeRoutes'));
-app.use('/api/profile', require('./routes/profileRoutes')); // ✅ HABILITADO
-app.use('/api/ratings', require('./routes/ratingRoutes'));  // ✅ HABILITADO
-
-// Manejo de errores 404 para rutas API
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ 
-    msg: 'Ruta de API no encontrada',
-    path: req.originalUrl,
-    method: req.method
-  });
-});
+// app.use('/api/ratings', require('./routes/ratingRoutes')); // Comentado hasta que se corrija el archivo
 
 // Servir aplicación React en producción
 if (process.env.NODE_ENV === 'production') {
@@ -58,71 +48,16 @@ if (process.env.NODE_ENV === 'production') {
   });
 } else {
   app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Skill Exchange API funcionando correctamente',
-      environment: 'development',
-      timestamp: new Date().toISOString(),
-      availableRoutes: [
-        'GET /api/test',
-        'POST /api/auth/register',
-        'POST /api/auth/login',
-        'GET /api/auth/me',
-        'GET /api/users',
-        'GET /api/users/me',
-        'PUT /api/users/me',
-        'GET /api/users/:id',
-        'GET /api/skills',
-        'POST /api/skills',
-        'GET /api/skills/categories',
-        'GET /api/exchanges/my-requests',
-        'POST /api/exchanges/request',
-        'PUT /api/exchanges/accept/:id',
-        'GET /api/profile/:id',
-        'PUT /api/profile/:id',
-        'POST /api/ratings',
-        'GET /api/ratings/user/:userId'
-      ]
-    });
+    res.json({ message: 'Skill Exchange API funcionando correctamente' });
   });
 }
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  
-  // Error de CORS
-  if (err.message === 'No permitido por CORS') {
-    return res.status(403).json({ 
-      msg: 'Error de CORS: Origin no permitido',
-      origin: req.get('origin')
-    });
-  }
-  
-  // Error de parsing JSON
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ msg: 'Invalid JSON' });
-  }
-
-  // Error de Multer (subida de archivos)
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ 
-      msg: 'Archivo demasiado grande',
-      maxSize: '5MB'
-    });
-  }
-  
-  res.status(500).json({ 
-    msg: 'Error interno del servidor',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
-  });
+  console.error(err.stack);
+  res.status(500).json({ msg: 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor iniciado en el puerto ${PORT}`);
-  console.log(`📝 Modo: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 API disponible en: http://localhost:${PORT}/api`);
-  console.log(`🔧 Prueba la API en: http://localhost:${PORT}/api/test`);
-  console.log(`📋 Lista completa de rutas en: http://localhost:${PORT}/`);
-});
+app.listen(PORT, () => console.log(`Servidor iniciado en el puerto ${PORT}`));

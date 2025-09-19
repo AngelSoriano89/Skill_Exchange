@@ -446,3 +446,210 @@
 .status-message-warning {
   @apply status-message bg-yellow-50 border-yellow-400 text-yellow-700;
 }
+
+
+/* Botones de contacto específicos */
+.contact-button {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105;
+}
+
+.contact-button-email {
+  @apply contact-button bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.contact-button-whatsapp {
+  @apply contact-button bg-green-600 hover:bg-green-700 text-white;
+}
+
+.contact-button-complete {
+  @apply contact-button bg-purple-600 hover:bg-purple-700 text-white;
+}
+
+.contact-button:disabled {
+  @apply opacity-50 cursor-not-allowed transform-none;
+}
+
+/* Cards de información de contacto */
+.contact-info-card {
+  @apply bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200;
+}
+
+.contact-tips-card {
+  @apply bg-yellow-50 border border-yellow-200 rounded-lg p-6;
+}
+
+/* Animaciones para elementos de contacto */
+.contact-slide-in {
+  animation: slideInFromBottom 0.4s ease-out forwards;
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mejoras para los modales de confirmación */
+.modal-overlay-contact {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content-contact {
+  @apply bg-white rounded-xl shadow-xl max-w-md w-full;
+  animation: modalSlideIn 0.3s ease-out forwards;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Estilos para badges de estado mejorados */
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-badge-accepted {
+  @apply status-badge bg-green-100 text-green-800 border border-green-300;
+}
+
+.status-badge-pending {
+  @apply status-badge bg-yellow-100 text-yellow-800 border border-yellow-300;
+}
+
+.status-badge-completed {
+  @apply status-badge bg-blue-100 text-blue-800 border border-blue-300;
+}
+
+/* Efectos hover para tarjetas de intercambio */
+.exchange-card {
+  @apply bg-gray-50 rounded-lg p-4 transition-all duration-200;
+}
+
+.exchange-card:hover {
+  @apply bg-gray-100 transform translate-y-[-2px] shadow-md;
+}
+
+/* Estilos para información de usuario */
+.user-info-section {
+  @apply space-y-2 text-sm;
+}
+
+.user-info-item {
+  @apply flex items-center text-gray-600;
+}
+
+.user-info-icon {
+  @apply w-4 h-4 mr-2 flex-shrink-0;
+}
+
+/* Estilos responsive para botones de contacto */
+@media (max-width: 640px) {
+  .contact-buttons-mobile {
+    @apply flex flex-col space-y-3;
+  }
+  
+  .contact-button-mobile {
+    @apply w-full py-3 px-4 text-base;
+  }
+}
+
+@media (min-width: 641px) {
+  .contact-buttons-desktop {
+    @apply grid grid-cols-2 gap-4;
+  }
+}
+
+/* Estilos para tooltips de contacto */
+.contact-tooltip {
+  @apply absolute z-10 px-2 py-1 text-xs text-white bg-gray-900 rounded-md opacity-0 pointer-events-none transition-opacity duration-200;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.contact-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1f2937 transparent transparent transparent;
+}
+
+.contact-button-group {
+  position: relative;
+}
+
+.contact-button-group:hover .contact-tooltip {
+  @apply opacity-100;
+}
+
+/* Animaciones de carga para botones */
+.button-loading {
+  @apply relative overflow-hidden;
+}
+
+.button-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Mejoras para la sección de skills */
+.skill-badge-container {
+  @apply flex flex-wrap gap-2 mt-2;
+}
+
+.skill-badge-learn {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200;
+}
+
+.skill-badge-teach {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200;
+}
+
+/* Estilos para mensajes de estado */
+.status-message {
+  @apply px-4 py-3 rounded-lg border-l-4;
+}
+
+.status-message-success {
+  @apply status-message bg-green-50 border-green-400 text-green-700;
+}
+
+.status-message-info {
+  @apply status-message bg-blue-50 border-blue-400 text-blue-700;
+}
+
+.status-message-warning {
+  @apply status-message bg-yellow-50 border-yellow-400 text-yellow-700;
+}
