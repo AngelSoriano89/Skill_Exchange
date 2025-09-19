@@ -25,10 +25,14 @@ const Dashboard = () => {
         api.get('/exchanges/my-requests')
       ]);
       
-      setPendingRequests(pendingRes.data);
-      setMyExchanges(exchangesRes.data);
+      setPendingRequests(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+      setMyExchanges(Array.isArray(exchangesRes.data) ? exchangesRes.data : []);
+      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // En caso de error, también inicializa con arrays vacíos para evitar fallos.
+      setPendingRequests([]);
+      setMyExchanges([]);
     } finally {
       setLoading(false);
     }

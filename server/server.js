@@ -39,15 +39,6 @@ app.use('/api/skills', require('./routes/skillRoutes'));
 app.use('/api/exchanges', require('./routes/exchangeRoutes'));
 // app.use('/api/ratings', require('./routes/ratingRoutes')); // Comentado hasta que se corrija el archivo
 
-// Manejo de errores 404 para rutas API
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ 
-    msg: 'Ruta de API no encontrada',
-    path: req.originalUrl,
-    method: req.method
-  });
-});
-
 // Servir aplicación React en producción
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
@@ -57,42 +48,16 @@ if (process.env.NODE_ENV === 'production') {
   });
 } else {
   app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Skill Exchange API funcionando correctamente',
-      environment: 'development',
-      timestamp: new Date().toISOString()
-    });
+    res.json({ message: 'Skill Exchange API funcionando correctamente' });
   });
 }
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  
-  // Error de CORS
-  if (err.message === 'No permitido por CORS') {
-    return res.status(403).json({ 
-      msg: 'Error de CORS: Origin no permitido',
-      origin: req.get('origin')
-    });
-  }
-  
-  // Error de parsing JSON
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ msg: 'Invalid JSON' });
-  }
-  
-  res.status(500).json({ 
-    msg: 'Error interno del servidor',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
-  });
+  console.error(err.stack);
+  res.status(500).json({ msg: 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor iniciado en el puerto ${PORT}`);
-  console.log(`📝 Modo: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 API disponible en: http://localhost:${PORT}/api`);
-  console.log(`🔧 Prueba la API en: http://localhost:${PORT}/api/test`);
-});
+app.listen(PORT, () => console.log(`Servidor iniciado en el puerto ${PORT}`));

@@ -38,7 +38,7 @@ const SkillSchema = new mongoose.Schema({
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'user',
+    ref: 'user', // ✅ CORRECTO - coincide con User model
     required: true,
   },
   tags: [{
@@ -109,4 +109,4 @@ SkillSchema.index({ level: 1 });
 SkillSchema.index({ isActive: 1 });
 SkillSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
-module.exports = mongoose.model('Skill', SkillSchema);
+module.exports = mongoose.model('skill', SkillSchema);

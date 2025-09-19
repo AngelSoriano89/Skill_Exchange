@@ -23,8 +23,10 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data);
     } catch (error) {
       console.error('Error checking auth status:', error);
+      // ✅ CORREGIDO: Limpiar estados cuando token es inválido
       localStorage.removeItem('token');
       setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -32,6 +34,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      setLoading(true); // ✅ AGREGADO: Loading state durante login
+      
       const res = await api.post('/auth/login', { email, password });
       const { token } = res.data;
       
@@ -45,15 +49,38 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
+      
+      // ✅ CORREGIDO: Limpiar estados en caso de error
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      
+      // ✅ MEJORADO: Manejo de errores más específico
+      let errorMessage = 'Error al iniciar sesión';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Credenciales incorrectas';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Datos de login inválidos';
+      } else if (error.response?.data?.msg) {
+        errorMessage = error.response.data.msg;
+      } else if (!navigator.onLine) {
+        errorMessage = 'Sin conexión a internet';
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.msg || 'Error al iniciar sesión' 
+        error: errorMessage
       };
+    } finally {
+      setLoading(false); // ✅ CORREGIDO: Siempre quitar loading
     }
   };
 
   const register = async (userData) => {
     try {
+      setLoading(true); // ✅ AGREGADO: Loading state durante registro
+      
       const res = await api.post('/auth/register', userData);
       const { token } = res.data;
       
@@ -67,10 +94,33 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Register error:', error);
+      
+      // ✅ CORREGIDO: Limpiar estados en caso de error
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      
+      // ✅ MEJORADO: Manejo de errores más específico
+      let errorMessage = 'Error al registrarse';
+      
+      if (error.response?.status === 400) {
+        if (error.response.data.msg?.includes('ya existe')) {
+          errorMessage = 'Este email ya está registrado';
+        } else {
+          errorMessage = error.response.data.msg || 'Datos de registro inválidos';
+        }
+      } else if (!navigator.onLine) {
+        errorMessage = 'Sin conexión a internet';
+      } else if (error.response?.data?.msg) {
+        errorMessage = error.response.data.msg;
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.msg || 'Error al registrarse' 
+        error: errorMessage
       };
+    } finally {
+      setLoading(false); // ✅ CORREGIDO: Siempre quitar loading
     }
   };
 
@@ -84,6 +134,28 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // ✅ AGREGADO: Función para verificar si el token está expirado
+  const isTokenExpired = () => {
+    if (!token) return true;
+    
+    try {
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Date.now() / 1000;
+      return tokenData.exp < currentTime;
+    } catch (error) {
+      console.error('Error parsing token:', error);
+      return true;
+    }
+  };
+
+  // ✅ AGREGADO: Auto-logout cuando el token expira
+  useEffect(() => {
+    if (token && isTokenExpired()) {
+      console.log('Token expired, logging out...');
+      logout();
+    }
+  }, [token]);
+
   const value = {
     user,
     loading,
@@ -91,7 +163,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    token, // ✅ AGREGADO: Exponer token para otros usos si es necesario
+    isTokenExpired // ✅ AGREGADO: Función útil para otros componentes
   };
 
   return (
