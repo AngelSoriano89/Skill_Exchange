@@ -2,44 +2,28 @@ import axios from 'axios';
 
 // ✅ CORREGIDO: Función para determinar baseURL de forma más robusta
 const getBaseURL = () => {
-  // ✅ Priorizar variable de entorno específica
-  if (process.env.REACT_APP_API_URL) {
-    return process.env.REACT_APP_API_URL;
+  if (process.env.NODE_ENV === 'production') {
+    // En producción, usar variable de entorno o detectar automáticamente
+    return process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
+  } else {
+    // En desarrollo, usar localhost
+    return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   }
-  
-  // ✅ En desarrollo, usar localhost
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:5000/api';
-  }
-  
-  // ✅ En producción, intentar detectar automáticamente
-  if (typeof window !== 'undefined') {
-    const { protocol, hostname, port } = window.location;
-    
-    // ✅ Si estamos en el mismo dominio, usar ruta relativa
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:5000/api';
-    }
-    
-    // ✅ Para dominios de producción, usar ruta relativa
-    return '/api';
-  }
-  
-  // ✅ Fallback para SSR o casos edge
-  return '/api';
 };
 
-// ✅ CORREGIDO: Configuración mejorada de axios
 const api = axios.create({
+<<<<<<< HEAD
   baseURL: getBaseURL(),
-  timeout: 30000, // ✅ AGREGADO: Timeout de 30 segundos
+=======
+  baseURL: '/api',
+>>>>>>> origin/dev
   headers: {
     'Content-Type': 'application/json',
     'X-Client-Type': 'web', // ✅ AGREGADO: Identificar cliente
     'X-Client-Version': process.env.REACT_APP_VERSION || '1.0.0'
   },
-  // ✅ AGREGADO: Habilitar cookies/credenciales
-  withCredentials: false // Cambiar a true si usas cookies para auth
+  withCredentials: true, // Importante para CORS con credenciales
+  timeout: 10000, // ✅ AGREGADO: Timeout de 10 segundos
 });
 
 // ✅ MEJORADO: Interceptor para requests con mejor logging y error handling
@@ -65,72 +49,89 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// ✅ AGREGADO: Interceptor para responses con manejo de errores mejorado
+// Interceptor para responses
 api.interceptors.response.use(
   (response) => {
-    // ✅ Log de respuesta exitosa (solo en desarrollo)
+    // Log para debug (solo en desarrollo)
     if (process.env.NODE_ENV === 'development') {
-      const duration = new Date() - response.config.metadata.startTime;
-      console.log(`✅ API Response: ${response.status} (${duration}ms)`, {
-        url: response.config.url,
-        status: response.status,
-        data: response.data
-      });
+      console.log(`API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
     }
-    
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // ✅ Log de error detallado
+  (error) => {
+    // Log detallado del error
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ API Error:', {
-        status: error.response?.status,
+      console.error('API Error:', {
         message: error.message,
-        url: originalRequest?.url,
-        method: originalRequest?.method,
-        data: error.response?.data
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method
       });
     }
-    
-    // ✅ AGREGADO: Manejo específico de errores 401 (token expirado)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+
+    // Manejo específico de errores comunes
+    if (error.response) {
+      const { status, data } = error.response;
       
-      // ✅ Token inválido, limpiar almacenamiento local
-      localStorage.removeItem('token');
-      
-      // ✅ Redirigir al login si no estamos ya ahí
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        console.log('🔄 Token expirado, redirigiendo al login...');
-        window.location.href = '/login';
+      switch (status) {
+        case 401:
+          // Token expirado o inválido
+          console.warn('Token inválido o expirado, limpiando sesión...');
+          localStorage.removeItem('token');
+          
+          // ✅ MEJORADO: Solo redirigir si no estamos ya en login/register
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/login' && currentPath !== '/register' && currentPath !== '/') {
+            // ✅ CORREGIDO: Usar window.location para evitar problemas de React Router
+            window.location.href = '/login';
+          }
+          break;
+          
+        case 403:
+          // Acceso denegado
+          console.error('Acceso denegado:', data.msg || 'Sin permisos');
+          break;
+          
+        case 404:
+          console.error('Recurso no encontrado:', error.config?.url);
+          break;
+          
+        case 422:
+          // ✅ AGREGADO: Errores de validación
+          console.error('Error de validación:', data.errors || data.msg);
+          break;
+          
+        case 429:
+          // ✅ AGREGADO: Rate limiting
+          console.error('Demasiadas peticiones:', data.msg || 'Intenta más tarde');
+          break;
+          
+        case 500:
+          console.error('Error del servidor:', data.msg || 'Error interno');
+          break;
+          
+        default:
+          console.error('Error de API:', data.msg || error.message);
       }
-      
-      return Promise.reject(error);
+    } else if (error.request) {
+      // Error de red o servidor no disponible
+      if (error.code === 'ECONNABORTED') {
+        console.error('Timeout de conexión: La petición tardó demasiado');
+      } else if (!navigator.onLine) {
+        console.error('Sin conexión a internet');
+      } else {
+        console.error('Error de conexión:', 'No se pudo conectar con el servidor');
+      }
+    } else {
+      console.error('Error de configuración:', error.message);
     }
-    
-    // ✅ AGREGADO: Manejo de errores de red
-    if (!error.response) {
-      // Error de conexión/red
-      const networkError = new Error('Error de conexión. Verifica tu conexión a internet.');
-      networkError.isNetworkError = true;
-      return Promise.reject(networkError);
-    }
-    
-    // ✅ AGREGADO: Manejo de errores del servidor
-    if (error.response.status >= 500) {
-      const serverError = new Error('Error del servidor. Intenta de nuevo más tarde.');
-      serverError.isServerError = true;
-      serverError.originalError = error;
-      return Promise.reject(serverError);
-    }
-    
+
     return Promise.reject(error);
   }
 );

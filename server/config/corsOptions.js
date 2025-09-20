@@ -67,61 +67,7 @@ const corsOptions = {
   
   // ✅ Código de éxito para requests OPTIONS
   optionsSuccessStatus: 200,
-  
-  // ✅ Métodos HTTP permitidos
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  
-  // ✅ Headers permitidos (incluyendo custom headers)
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'x-auth-token',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'X-Client-Type',
-    'X-Client-Version',
-    'Access-Control-Allow-Origin',
-    'Cross-Origin-Resource-Policy'
-  ],
-  
-  // ✅ Headers expuestos al cliente
-  exposedHeaders: [
-    'X-Total-Count',
-    'X-Page-Count',
-    'X-Current-Page',
-    'X-Rate-Limit-Remaining',
-    'Access-Control-Allow-Origin',
-    'Cross-Origin-Resource-Policy'
-  ],
-  preflightContinue: false,
-  // ✅ Cache del preflight request (24 horas)
-  maxAge: 24 * 60 * 60
+  credentials: true,
 };
-
-// ✅ AGREGADO: Función helper para validar configuración CORS
-const validateCorsConfig = () => {
-  if (process.env.NODE_ENV === 'production') {
-    const hasValidOrigins = [
-      process.env.CLIENT_URL,
-      process.env.FRONTEND_URL,
-      process.env.CLIENT_URLS
-    ].some(Boolean);
-    
-    if (!hasValidOrigins) {
-      console.error('❌ ERROR: No se han configurado orígenes válidos para producción');
-      console.error('   Configura al menos una de estas variables:');
-      console.error('   - CLIENT_URL');
-      console.error('   - FRONTEND_URL');
-      console.error('   - CLIENT_URLS (separadas por comas)');
-      process.exit(1);
-    }
-  }
-  
-  console.log(`✅ CORS configurado correctamente para ${process.env.NODE_ENV || 'development'}`);
-};
-
-// ✅ Validar configuración al cargar el módulo
-validateCorsConfig();
 
 module.exports = corsOptions;

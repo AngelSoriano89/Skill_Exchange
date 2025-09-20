@@ -142,25 +142,16 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/skills', require('./routes/skillRoutes'));
 app.use('/api/exchanges', require('./routes/exchangeRoutes'));
-app.use('/api/ratings', require('./routes/ratingRoutes')); // ✅ DESCOMENTADO
-app.use('/api/profile', require('./routes/profileRoutes')); // ✅ AGREGADO
+app.use('/api/profile', require('./routes/profileRoutes')); // ✅ HABILITADO
+app.use('/api/ratings', require('./routes/ratingRoutes'));  // ✅ HABILITADO
 
-// ✅ AGREGADO: Ruta 404 para API
+// Manejo de errores 404 para rutas API
 app.use('/api/*', (req, res) => {
-  res.status(404).json({ 
-    msg: 'Endpoint no encontrado',
-    path: req.path,
-    method: req.method,
-    availableRoutes: [
-      'GET /api/health',
-      'POST /api/auth/login',
-      'POST /api/auth/register',
-      'GET /api/users',
-      'GET /api/skills',
-      'GET /api/exchanges',
-      'GET /api/ratings'
-    ]
-  });
+  res.status(404).json({ 
+    msg: 'Ruta de API no encontrada',
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
 // ✅ MEJORADO: Servir aplicación React en producción
@@ -184,76 +175,73 @@ if (process.env.NODE_ENV === 'production') {
     });
   }
 } else {
-  app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Skill Exchange API - Modo Desarrollo',
-      docs: '/api/health',
-      frontend: 'http://localhost:3000'
-    });
-  });
+  app.get('/', (req, res) => {
+    res.json({ 
+      message: 'Skill Exchange API funcionando correctamente',
+      environment: 'development',
+      timestamp: new Date().toISOString(),
+      availableRoutes: [
+        'GET /api/test',
+        'POST /api/auth/register',
+        'POST /api/auth/login',
+        'GET /api/auth/me',
+        'GET /api/users',
+        'GET /api/users/me',
+        'PUT /api/users/me',
+        'GET /api/users/:id',
+        'GET /api/skills',
+        'POST /api/skills',
+        'GET /api/skills/categories',
+        'GET /api/exchanges/my-requests',
+        'POST /api/exchanges/request',
+        'PUT /api/exchanges/accept/:id',
+        'GET /api/profile/:id',
+        'PUT /api/profile/:id',
+        'POST /api/ratings',
+        'GET /api/ratings/user/:userId'
+      ]
+    });
+  });
 }
 
 // ✅ MEJORADO: Middleware de manejo de errores global
 app.use((err, req, res, next) => {
-  console.error('Error global:', err.stack);
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
-  next();
-  
-  // Error de CORS
-  if (err.message === 'No permitido por CORS') {
-    return res.status(403).json({ 
-      msg: 'CORS Error: Origen no permitido',
-      origin: req.get('origin')
-    });
-  }
-  
-  // Error de JSON malformado
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ 
-      msg: 'JSON malformado en el request body' 
-    });
-  }
-  
-  // Error de límite de tamaño
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ 
-      msg: 'Archivo demasiado grande',
-      limit: '10MB'
-    });
-  }
-  
-  // Error genérico
-  const statusCode = err.statusCode || err.status || 500;
-  res.status(statusCode).json({ 
-    msg: process.env.NODE_ENV === 'production' 
-      ? 'Error interno del servidor' 
-      : err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+  console.error('Error:', err.stack);
+  
+  // Error de CORS
+  if (err.message === 'No permitido por CORS') {
+    return res.status(403).json({ 
+      msg: 'Error de CORS: Origin no permitido',
+      origin: req.get('origin')
+    });
+  }
+  
+  // Error de parsing JSON
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ msg: 'Invalid JSON' });
+  }
+
+  // Error de Multer (subida de archivos)
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ 
+      msg: 'Archivo demasiado grande',
+      maxSize: '5MB'
+    });
+  }
+  
+  res.status(500).json({ 
+    msg: 'Error interno del servidor',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+  });
 });
 
 // ✅ MEJORADO: Puerto con fallback
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor iniciado en el puerto ${PORT}`);
-  console.log(`📁 Modo: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-});
-
-// ✅ AGREGADO: Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM recibido, cerrando servidor...');
-  server.close(() => {
-    console.log('✅ Servidor cerrado correctamente');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT recibido, cerrando servidor...');
-  server.close(() => {
-    console.log('✅ Servidor cerrado correctamente');
-    process.exit(0);
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor iniciado en el puerto ${PORT}`);
+  console.log(`📝 Modo: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 API disponible en: http://localhost:${PORT}/api`);
+  console.log(`🔧 Prueba la API en: http://localhost:${PORT}/api/test`);
+  console.log(`📋 Lista completa de rutas en: http://localhost:${PORT}/`);
 });
