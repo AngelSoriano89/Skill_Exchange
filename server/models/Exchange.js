@@ -3,46 +3,48 @@ const mongoose = require('mongoose');
 const ExchangeSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'user', // ✅ MANTENER minúscula para consistencia
+    ref: 'User', // ✅ CORREGIDO: Capitalizado para consistencia
     required: true,
-    index: true, // ✅ AGREGADO: Índice para optimizar búsquedas
+    index: true,
   },
   recipient: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'user', // ✅ MANTENER minúscula para consistencia
+    ref: 'User', // ✅ CORREGIDO: Capitalizado para consistencia
     required: true,
-    index: true, // ✅ AGREGADO: Índice para optimizar búsquedas
+    index: true,
   },
   skills_to_offer: [{
     type: String,
     required: true,
-    trim: true, // ✅ AGREGADO: Limpiar espacios
-    maxlength: 50, // ✅ AGREGADO: Límite por skill
+    trim: true,
+    maxlength: [50, 'Cada habilidad no puede exceder 50 caracteres'],
   }],
   skills_to_learn: [{
     type: String,
     required: true,
-    trim: true, // ✅ AGREGADO: Limpiar espacios
-    maxlength: 50, // ✅ AGREGADO: Límite por skill
+    trim: true,
+    maxlength: [50, 'Cada habilidad no puede exceder 50 caracteres'],
   }],
   message: {
     type: String,
     required: true,
-    trim: true, // ✅ AGREGADO: Limpiar espacios
-    minlength: 10, // ✅ AGREGADO: Mensaje mínimo
-    maxlength: 500, // ✅ AGREGADO: Límite de mensaje
+    trim: true,
+    minlength: [10, 'El mensaje debe tener al menos 10 caracteres'],
+    maxlength: [500, 'El mensaje no puede exceder 500 caracteres'],
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'rejected', 'completed'],
+    enum: {
+      values: ['pending', 'accepted', 'rejected', 'completed'],
+      message: '{VALUE} no es un estado válido'
+    },
     default: 'pending',
     required: true,
-    index: true, // ✅ AGREGADO: Índice para filtrar por estado
+    index: true,
   },
-  // ✅ CORREGIDO: Referencia opcional a skill específica
   skill: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'skill', // ✅ Mantener minúscula para consistencia
+    ref: 'Skill', // ✅ CORREGIDO: Capitalizado para consistencia
     default: null,
   },
   contactInfo: {
@@ -53,9 +55,7 @@ const ExchangeSchema = new mongoose.Schema({
     unlockedAt: {
       type: Date,
       default: null,
-    },
-    // ✅ SIMPLIFICADO: No almacenar info de contacto duplicada
-    // La info de contacto se obtiene directamente del modelo User
+    }
   },
   exchangeDetails: {
     startDate: {
@@ -68,18 +68,23 @@ const ExchangeSchema = new mongoose.Schema({
     },
     estimatedDuration: {
       type: String,
-      enum: ['1 semana', '2 semanas', '1 mes', '2 meses', '3+ meses', 'Flexible'],
+      enum: {
+        values: ['1 semana', '2 semanas', '1 mes', '2 meses', '3+ meses', 'Flexible'],
+        message: '{VALUE} no es una duración válida'
+      },
       default: 'Flexible',
     },
     meetingPreference: {
       type: String,
-      enum: ['Presencial', 'Virtual', 'Ambos'],
+      enum: {
+        values: ['Presencial', 'Virtual', 'Ambos'],
+        message: '{VALUE} no es una preferencia válida'
+      },
       default: 'Ambos',
     },
-    // ✅ AGREGADO: Notas adicionales del intercambio
     notes: {
       type: String,
-      maxlength: 1000,
+      maxlength: [1000, 'Las notas no pueden exceder 1000 caracteres'],
       default: '',
       trim: true,
     },
@@ -93,38 +98,41 @@ const ExchangeSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
-    // ✅ AGREGADO: Referencias a las calificaciones
     senderRatingId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'rating',
+      ref: 'Rating', // ✅ CORREGIDO: Capitalizado para consistencia
       default: null,
     },
     recipientRatingId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'rating',
+      ref: 'Rating', // ✅ CORREGIDO: Capitalizado para consistencia
       default: null,
     },
   },
-  // ✅ AGREGADO: Metadatos adicionales
   metadata: {
     ipAddress: {
       type: String,
       default: '',
+      maxlength: 45, // ✅ IPv6 compatible
     },
     userAgent: {
       type: String,
       default: '',
+      maxlength: 512,
     },
     source: {
       type: String,
-      enum: ['web', 'mobile', 'api'],
+      enum: {
+        values: ['web', 'mobile', 'api'],
+        message: '{VALUE} no es una fuente válida'
+      },
       default: 'web',
     },
   },
   date: {
     type: Date,
     default: Date.now,
-    index: true, // ✅ AGREGADO: Índice para ordenar por fecha
+    index: true,
   },
   updatedAt: {
     type: Date,
@@ -132,76 +140,201 @@ const ExchangeSchema = new mongoose.Schema({
   },
 });
 
-// ✅ MEJORADO: Middleware para actualizar updatedAt y validaciones
+// ✅ MEJORADO: Middleware pre-save con validaciones más robustas
 ExchangeSchema.pre('save', function(next) {
   // Actualizar timestamp
   this.updatedAt = Date.now();
   
-  // ✅ AGREGADO: Validar que sender y recipient sean diferentes
+  // ✅ Validar que sender y recipient sean diferentes
   if (this.sender && this.recipient && this.sender.toString() === this.recipient.toString()) {
-    next(new Error('El emisor y receptor no pueden ser el mismo usuario'));
-    return;
+    return next(new Error('El emisor y receptor no pueden ser el mismo usuario'));
   }
   
-  // ✅ AGREGADO: Validar skills arrays no vacíos
+  // ✅ Validar que skills arrays no estén vacíos
   if (!this.skills_to_offer || this.skills_to_offer.length === 0) {
-    next(new Error('Debe especificar al menos una habilidad a ofrecer'));
-    return;
+    return next(new Error('Debe especificar al menos una habilidad a ofrecer'));
   }
   
   if (!this.skills_to_learn || this.skills_to_learn.length === 0) {
-    next(new Error('Debe especificar al menos una habilidad a aprender'));
-    return;
+    return next(new Error('Debe especificar al menos una habilidad a aprender'));
   }
   
-  // ✅ AGREGADO: Auto-unlock contact info cuando se acepta
+  // ✅ Validar límite de habilidades
+  if (this.skills_to_offer.length > 10) {
+    return next(new Error('No puedes ofrecer más de 10 habilidades'));
+  }
+  
+  if (this.skills_to_learn.length > 10) {
+    return next(new Error('No puedes solicitar más de 10 habilidades'));
+  }
+  
+  // ✅ Auto-unlock contact info cuando se acepta
   if (this.status === 'accepted' && !this.contactInfo.isUnlocked) {
     this.contactInfo.isUnlocked = true;
     this.contactInfo.unlockedAt = new Date();
   }
   
+  // ✅ Validar transiciones de estado
+  if (this.isModified('status')) {
+    const validTransitions = {
+      'pending': ['accepted', 'rejected'],
+      'accepted': ['completed'],
+      'rejected': [], // No se puede cambiar desde rejected
+      'completed': [] // No se puede cambiar desde completed
+    };
+    
+    if (this.isNew) {
+      // Nuevo documento, debe ser pending
+      if (this.status !== 'pending') {
+        return next(new Error('Los intercambios nuevos deben tener estado "pending"'));
+      }
+    } else {
+      // Documento existente, validar transición
+      const originalDoc = this.constructor.findById(this._id);
+      if (originalDoc && originalDoc.status) {
+        const allowedStatuses = validTransitions[originalDoc.status] || [];
+        if (!allowedStatuses.includes(this.status)) {
+          return next(new Error(`No se puede cambiar de "${originalDoc.status}" a "${this.status}"`));
+        }
+      }
+    }
+  }
+  
   next();
 });
 
-// ✅ AGREGADO: Índices compuestos para consultas comunes
+// ✅ CORREGIDO: Índices compuestos optimizados
 ExchangeSchema.index({ sender: 1, status: 1 });
 ExchangeSchema.index({ recipient: 1, status: 1 });
 ExchangeSchema.index({ status: 1, date: -1 });
 ExchangeSchema.index({ sender: 1, recipient: 1 });
+ExchangeSchema.index({ 'metadata.source': 1 });
+ExchangeSchema.index({ updatedAt: -1 }); // ✅ Para queries de "recently updated"
 
-// ✅ AGREGADO: Método para verificar si ambos usuarios han calificado
+// ✅ AGREGADO: Índice de texto para búsqueda
+ExchangeSchema.index({
+  skills_to_offer: 'text',
+  skills_to_learn: 'text',
+  message: 'text'
+});
+
+// ✅ MEJORADO: Método para verificar si ambos usuarios han calificado
 ExchangeSchema.methods.isBothRated = function() {
   return this.ratings.senderRated && this.ratings.recipientRated;
 };
 
-// ✅ AGREGADO: Método para obtener el otro usuario en el intercambio
+// ✅ MEJORADO: Método para obtener el otro usuario en el intercambio
 ExchangeSchema.methods.getOtherUser = function(currentUserId) {
+  if (!currentUserId) throw new Error('currentUserId es requerido');
+  
   const currentUserIdStr = currentUserId.toString();
-  if (this.sender._id?.toString() === currentUserIdStr || this.sender.toString() === currentUserIdStr) {
+  const senderIdStr = this.sender._id ? this.sender._id.toString() : this.sender.toString();
+  const recipientIdStr = this.recipient._id ? this.recipient._id.toString() : this.recipient.toString();
+  
+  if (senderIdStr === currentUserIdStr) {
     return this.recipient;
-  } else {
+  } else if (recipientIdStr === currentUserIdStr) {
     return this.sender;
+  } else {
+    throw new Error('El usuario actual no es parte de este intercambio');
   }
 };
 
-// ✅ AGREGADO: Virtual para verificar si está expirado (después de 30 días pendiente)
+// ✅ AGREGADO: Método para verificar si el usuario puede modificar el intercambio
+ExchangeSchema.methods.canUserModify = function(userId, action) {
+  const userIdStr = userId.toString();
+  const senderIdStr = this.sender._id ? this.sender._id.toString() : this.sender.toString();
+  const recipientIdStr = this.recipient._id ? this.recipient._id.toString() : this.recipient.toString();
+  
+  switch (action) {
+    case 'accept':
+    case 'reject':
+      return recipientIdStr === userIdStr && this.status === 'pending';
+    case 'cancel':
+      return senderIdStr === userIdStr && this.status === 'pending';
+    case 'complete':
+      return (senderIdStr === userIdStr || recipientIdStr === userIdStr) && this.status === 'accepted';
+    case 'view':
+      return senderIdStr === userIdStr || recipientIdStr === userIdStr;
+    default:
+      return false;
+  }
+};
+
+// ✅ AGREGADO: Método estático para obtener estadísticas
+ExchangeSchema.statics.getStats = async function(userId) {
+  const stats = await this.aggregate([
+    {
+      $match: {
+        $or: [
+          { sender: mongoose.Types.ObjectId(userId) },
+          { recipient: mongoose.Types.ObjectId(userId) }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+  
+  const result = {
+    pending: 0,
+    accepted: 0,
+    rejected: 0,
+    completed: 0,
+    total: 0
+  };
+  
+  stats.forEach(stat => {
+    result[stat._id] = stat.count;
+    result.total += stat.count;
+  });
+  
+  return result;
+};
+
+// ✅ Virtual para verificar si está expirado (después de 30 días pendiente)
 ExchangeSchema.virtual('isExpired').get(function() {
   if (this.status !== 'pending') return false;
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   return this.date < thirtyDaysAgo;
 });
 
-// ✅ AGREGADO: Virtual para duración del intercambio
+// ✅ Virtual para duración del intercambio
 ExchangeSchema.virtual('duration').get(function() {
   if (!this.exchangeDetails.startDate || !this.exchangeDetails.endDate) return null;
   const diffTime = Math.abs(this.exchangeDetails.endDate - this.exchangeDetails.startDate);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return `${diffDays} días`;
+  return `${diffDays} día${diffDays !== 1 ? 's' : ''}`;
 });
 
-// ✅ AGREGADO: Incluir virtuals en JSON
-ExchangeSchema.set('toJSON', { virtuals: true });
+// ✅ Virtual para el estado legible en español
+ExchangeSchema.virtual('statusText').get(function() {
+  const statusMap = {
+    pending: 'Pendiente',
+    accepted: 'Aceptado',
+    rejected: 'Rechazado',
+    completed: 'Completado'
+  };
+  return statusMap[this.status] || this.status;
+});
+
+// ✅ CORREGIDO: Incluir virtuals en JSON y Object
+ExchangeSchema.set('toJSON', { 
+  virtuals: true,
+  transform: function(doc, ret) {
+    // ✅ Remover campos sensibles según el contexto
+    if (ret.metadata && process.env.NODE_ENV === 'production') {
+      delete ret.metadata.ipAddress;
+      delete ret.metadata.userAgent;
+    }
+    return ret;
+  }
+});
 ExchangeSchema.set('toObject', { virtuals: true });
 
-// ✅ CORREGIDO: Mantener nombre en minúscula para consistencia
-module.exports = mongoose.model('exchange', ExchangeSchema);
+// ✅ CORREGIDO: Usar nombre capitalizado para el modelo
+module.exports = mongoose.model('Exchange', ExchangeSchema);
