@@ -6,35 +6,56 @@ const User = require('../models/User');
 // @desc    Registrar un nuevo usuario
 // @access  Public
 exports.register = async (req, res) => {
-  const { name, email, password, skills_to_offer, skills_to_learn, bio } = req.body;
+  console.log('=== REGISTER REQUEST START ===');
+  console.log('Request body:', req.body);
+  
+  try {
+    const { name, email, password, skills_to_offer, skills_to_learn, bio } = req.body;
 
   try {
-    console.log('Registration attempt for email:', email);
-    console.log('Registration data:', { name, email, password: password ? '[PROVIDED]' : '[MISSING]', skills_to_offer, skills_to_learn, bio });
-
     let user = await User.findOne({ email });
     if (user) {
-      console.log('User already exists:', email);
       return res.status(400).json({ msg: 'El usuario ya existe' });
+    }
+
+    console.log('✅ User does not exist, creating new user');
+
+    // ✅ CORREGIDO: Procesar arrays de skills
+    let processedSkillsToOffer = [];
+    let processedSkillsToLearn = [];
+
+    if (skills_to_offer) {
+      if (Array.isArray(skills_to_offer)) {
+        processedSkillsToOffer = skills_to_offer;
+      } else if (typeof skills_to_offer === 'string') {
+        processedSkillsToOffer = skills_to_offer.split(',').map(s => s.trim()).filter(s => s);
+      }
+    }
+
+    if (skills_to_learn) {
+      if (Array.isArray(skills_to_learn)) {
+        processedSkillsToLearn = skills_to_learn;
+      } else if (typeof skills_to_learn === 'string') {
+        processedSkillsToLearn = skills_to_learn.split(',').map(s => s.trim()).filter(s => s);
+      }
     }
 
     console.log('Creating new user...');
     user = new User({
-      name,
-      email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       password,
-      skills_to_offer,
-      skills_to_learn,
-      bio,
+      skills_to_offer: processedSkillsToOffer,
+      skills_to_learn: processedSkillsToLearn,
+      bio: bio ? bio.trim() : '',
     });
+
+    console.log('✅ User object created, hashing password...');
 
     console.log('Hashing password...');
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
-    
-    console.log('Saving user to database...');
     await user.save();
-    console.log('User saved successfully with ID:', user.id);
 
     const payload = {
       user: {
@@ -42,23 +63,18 @@ exports.register = async (req, res) => {
       },
     };
 
-    console.log('Creating JWT token for new user...');
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '1h' },
+      { expiresIn: '24h' }, // ✅ CAMBIADO: Token más duradero para desarrollo
       (err, token) => {
-        if (err) {
-          console.error('JWT signing error:', err);
-          throw err;
-        }
-        console.log('Registration successful for user:', email);
+        if (err) throw err;
         res.json({ token });
       }
     );
   } catch (err) {
-    console.error('Registration error:', err.message);
-    res.status(500).json({ msg: 'Error del servidor' });
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
   }
 };
 
@@ -66,36 +82,25 @@ exports.register = async (req, res) => {
 // @desc    Autenticar usuario y obtener token
 // @access  Public
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  console.log('=== LOGIN REQUEST START ===');
+  console.log('Request body:', { email: req.body.email, password: req.body.password ? '[PROVIDED]' : '[MISSING]' });
 
   try {
-    console.log('Login attempt for email:', email);
-    console.log('Request body:', { email, password: password ? '[PROVIDED]' : '[MISSING]' });
+    const { email, password } = req.body;
 
-    // Validar que se proporcionen email y password
-    if (!email || !password) {
-      console.log('Missing email or password');
-      return res.status(400).json({ msg: 'Email y contraseña son requeridos' });
-    }
-
+  try {
     let user = await User.findOne({ email });
-    console.log('User found:', user ? 'YES' : 'NO');
-    
     if (!user) {
-      console.log('User not found for email:', email);
       return res.status(400).json({ msg: 'Credenciales inválidas' });
     }
 
-    console.log('Comparing passwords...');
     const isMatch = await bcrypt.compare(password, user.password);
     console.log('Password match:', isMatch ? 'YES' : 'NO');
     
     if (!isMatch) {
-      console.log('Password mismatch for user:', email);
       return res.status(400).json({ msg: 'Credenciales inválidas' });
     }
 
-    console.log('Creating JWT token...');
     const payload = {
       user: {
         id: user.id,
@@ -105,19 +110,15 @@ exports.login = async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: '1h' },
+      { expiresIn: '24h' }, // ✅ CAMBIADO: Token más duradero
       (err, token) => {
-        if (err) {
-          console.error('JWT signing error:', err);
-          throw err;
-        }
-        console.log('Login successful for user:', email);
+        if (err) throw err;
         res.json({ token });
       }
     );
   } catch (err) {
-    console.error('Login error:', err.message);
-    res.status(500).json({ msg: 'Error del servidor' });
+    console.error(err.message);
+    res.status(500).send('Error del servidor');
   }
 };
 
@@ -125,12 +126,25 @@ exports.login = async (req, res) => {
 // @desc    Obtener los datos del usuario logueado
 // @access  Private
 exports.getLoggedInUser = async (req, res) => {
+  console.log('=== GET USER REQUEST START ===');
+  console.log('User ID from token:', req.user?.id);
+
   try {
-    // req.user viene del authMiddleware, que valida el token y añade el usuario a la petición.
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      console.log('❌ User not found with ID:', req.user.id);
+      return res.status(404).json({ msg: 'Usuario no encontrado' });
+    }
+
+    console.log('✅ User found and returned');
+    console.log('=== GET USER REQUEST END ===');
     res.json(user);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Error del servidor');
+    console.log('❌ Get user error:', err);
+    console.log('=== GET USER REQUEST END (ERROR) ===');
+    res.status(500).json({ 
+      msg: 'Error del servidor',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
