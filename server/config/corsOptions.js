@@ -37,25 +37,28 @@ const corsOptions = {
         'http://localhost:3001',
         'http://127.0.0.1:3001',
         'http://localhost:8080',
-        'http://127.0.0.1:8080'
+        'http://127.0.0.1:8080',
+        'http://localhost',
+        'http://127.0.0.1',
+        // Agrega aquí tu dominio de producción cuando lo tengas
+        // 'https://tu-dominio-production.com'
       ];
     }
     
     // ✅ Log para debug (solo en desarrollo)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('CORS Check:', {
-        origin,
-        allowedOrigins,
-        allowed: allowedOrigins.includes(origin)
-      });
-    }
-    
-    // ✅ Verificar si el origen está permitido
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-      callback(null, true);
+    if (!origin) return callback(null, true);
+
+    // Verificar si el origin está en la lista permitida
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     } else {
-      console.warn(`❌ CORS: Origin "${origin}" no permitido. Orígenes válidos:`, allowedOrigins);
-      callback(new Error(`CORS: Origin "${origin}" no permitido por la política CORS`));
+      console.log(`CORS: Origin no permitido: ${origin}`);
+      // ✅ CAMBIO: En desarrollo, permitir todos los origins para archivos estáticos
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Permitiendo origin en desarrollo:', origin);
+        return callback(null, true);
+      }
+      return callback(new Error('No permitido por CORS'));
     }
   },
   
@@ -77,7 +80,9 @@ const corsOptions = {
     'Accept',
     'Origin',
     'X-Client-Type',
-    'X-Client-Version'
+    'X-Client-Version',
+    'Access-Control-Allow-Origin',
+    'Cross-Origin-Resource-Policy'
   ],
   
   // ✅ Headers expuestos al cliente
@@ -85,9 +90,11 @@ const corsOptions = {
     'X-Total-Count',
     'X-Page-Count',
     'X-Current-Page',
-    'X-Rate-Limit-Remaining'
+    'X-Rate-Limit-Remaining',
+    'Access-Control-Allow-Origin',
+    'Cross-Origin-Resource-Policy'
   ],
-  
+  preflightContinue: false,
   // ✅ Cache del preflight request (24 horas)
   maxAge: 24 * 60 * 60
 };

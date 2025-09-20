@@ -1,5 +1,6 @@
 const Exchange = require('../models/Exchange');
 const User = require('../models/User');
+const mongoose = require('mongoose'); // ✅ AGREGADO: Import mongoose
 
 // @route   POST api/exchanges/request
 // @desc    Crear una nueva solicitud de intercambio
@@ -192,49 +193,61 @@ exports.getPendingRequests = async (req, res) => {
 // @access  Private
 exports.acceptExchangeRequest = async (req, res) => {
   try {
+    console.log('Attempting to accept exchange:', req.params.id);
+    
     const exchange = await Exchange.findById(req.params.id);
     
     if (!exchange) {
+      console.log('Exchange not found:', req.params.id);
       return res.status(404).json({ msg: 'Intercambio no encontrado' });
     }
     
+    console.log('Exchange found:', {
+      id: exchange._id,
+      status: exchange.status,
+      sender: exchange.sender,
+      recipient: exchange.recipient,
+      currentUser: req.user.id
+    });
+    
     // Verificar que el usuario actual es el recipient
     if (exchange.recipient.toString() !== req.user.id) {
+      console.log('Unauthorized: User is not recipient', {
+        recipient: exchange.recipient.toString(),
+        currentUser: req.user.id
+      });
       return res.status(401).json({ msg: 'No tienes autorización para aceptar esta solicitud' });
     }
     
     // Verificar que la solicitud esté pendiente
     if (exchange.status !== 'pending') {
+      console.log('Exchange is not pending:', exchange.status);
       return res.status(400).json({ 
         msg: 'Esta solicitud ya no está pendiente',
         currentStatus: exchange.status
       });
     }
     
-    // ✅ AGREGADO: Usar transacción para atomicidad
-    const session = await Exchange.startSession();
-    session.startTransaction();
+    // ✅ CORREGIDO: Eliminar transacción que causa problemas
+    console.log('Updating exchange status to accepted...');
     
+    exchange.status = 'accepted';
+    exchange.contactInfo.isUnlocked = true;
+    exchange.contactInfo.unlockedAt = new Date();
+    
+    await exchange.save();
+    console.log('Exchange updated successfully');
+    
+    // ✅ CORREGIDO: Actualizar contadores sin transacción
     try {
-      exchange.status = 'accepted';
-      exchange.contactInfo.isUnlocked = true;
-      exchange.contactInfo.unlockedAt = new Date();
-      
-      await exchange.save({ session });
-      
-      // ✅ AGREGADO: Actualizar contador de intercambios de ambos usuarios
       await User.updateMany(
         { _id: { $in: [exchange.sender, exchange.recipient] } },
-        { $inc: { totalExchanges: 1 } },
-        { session }
+        { $inc: { totalExchanges: 1 } }
       );
-      
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
+      console.log('User counters updated successfully');
+    } catch (counterError) {
+      console.error('Error updating user counters (non-critical):', counterError.message);
+      // No fallar la operación por esto
     }
     
     // ✅ OPTIMIZADO: Poblar datos después de guardar
@@ -243,11 +256,19 @@ exports.acceptExchangeRequest = async (req, res) => {
       { path: 'recipient', select: 'name email avatar phone' }
     ]);
     
+    console.log('Exchange acceptance completed successfully');
     res.json(exchange);
   } catch (err) {
     console.error('Error accepting exchange:', err.message);
+    console.error('Full error:', err);
+    
+    // ✅ MEJORADO: Manejo específico de errores
+    if (err.kind === 'ObjectId' || err.name === 'CastError') {
+      return res.status(400).json({ msg: 'ID de intercambio inválido' });
+    }
+    
     res.status(500).json({ 
-      msg: 'Error del servidor',
+      msg: 'Error del servidor al aceptar intercambio',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
@@ -408,7 +429,7 @@ exports.getExchangeById = async (req, res) => {
   }
 };
 
-// ✅ AGREGADO: Función para obtener estadísticas de intercambios
+// ✅ CORREGIDO: Función para obtener estadísticas de intercambios
 // @route   GET api/exchanges/stats
 // @desc    Obtener estadísticas de intercambios del usuario actual
 // @access  Private
@@ -416,12 +437,13 @@ exports.getExchangeStats = async (req, res) => {
   try {
     const userId = req.user.id;
     
+    // ✅ CORREGIDO: Usar new mongoose.Types.ObjectId() en lugar de mongoose.Types.ObjectId()
     const stats = await Exchange.aggregate([
       {
         $match: {
           $or: [
-            { sender: mongoose.Types.ObjectId(userId) },
-            { recipient: mongoose.Types.ObjectId(userId) }
+            { sender: new mongoose.Types.ObjectId(userId) },
+            { recipient: new mongoose.Types.ObjectId(userId) }
           ]
         }
       },
@@ -512,99 +534,6 @@ exports.cancelExchange = async (req, res) => {
       return res.status(404).json({ msg: 'Intercambio no encontrado' });
     }
     
-    res.status(500).json({ 
-      msg: 'Error del servidor',
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-  }
-};
-
-// ✅ AGREGADO: Función para obtener intercambios por filtros avanzados
-// @route   GET api/exchanges/search
-// @desc    Buscar intercambios con filtros avanzados
-// @access  Private
-exports.searchExchanges = async (req, res) => {
-  try {
-    const {
-      status,
-      skills,
-      dateFrom,
-      dateTo,
-      userId,
-      page = 1,
-      limit = 20,
-      sortBy = 'date',
-      sortOrder = 'desc'
-    } = req.query;
-
-    // Construir filtro base
-    const filter = {
-      $or: [{ sender: req.user.id }, { recipient: req.user.id }]
-    };
-
-    // Aplicar filtros adicionales
-    if (status && status !== 'all') {
-      filter.status = status;
-    }
-
-    if (skills) {
-      const skillsArray = skills.split(',').map(s => s.trim());
-      filter.$or = [
-        ...filter.$or,
-        { skills_to_offer: { $in: skillsArray } },
-        { skills_to_learn: { $in: skillsArray } }
-      ];
-    }
-
-    if (dateFrom || dateTo) {
-      filter.date = {};
-      if (dateFrom) filter.date.$gte = new Date(dateFrom);
-      if (dateTo) filter.date.$lte = new Date(dateTo);
-    }
-
-    if (userId) {
-      filter.$or = [
-        { sender: userId, recipient: req.user.id },
-        { sender: req.user.id, recipient: userId }
-      ];
-    }
-
-    // Configurar paginación y ordenamiento
-    const skip = (page - 1) * limit;
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const [exchanges, total] = await Promise.all([
-      Exchange.find(filter)
-        .populate('sender', 'name email avatar averageRating')
-        .populate('recipient', 'name email avatar averageRating')
-        .populate('skill', 'title category level')
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      
-      Exchange.countDocuments(filter)
-    ]);
-
-    res.json({
-      exchanges,
-      pagination: {
-        current: parseInt(page),
-        total,
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
-      },
-      filters: {
-        status,
-        skills,
-        dateFrom,
-        dateTo,
-        userId
-      }
-    });
-  } catch (err) {
-    console.error('Error searching exchanges:', err.message);
     res.status(500).json({ 
       msg: 'Error del servidor',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
