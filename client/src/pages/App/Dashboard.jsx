@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { ENDPOINTS } from '../../api/api';
+import Avatar from '../../components/Common/Avatar';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate(); // Agregado para navegación programática
+  const navigate = useNavigate();
   const [pendingRequests, setPendingRequests] = useState([]);
   const [myExchanges, setMyExchanges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,8 +23,8 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const [pendingRes, exchangesRes] = await Promise.all([
-        api.get('/exchanges/pending'),
-        api.get('/exchanges/my-requests')
+        api.get(ENDPOINTS.exchanges.pending),
+        api.get(ENDPOINTS.exchanges.myRequests)
       ]);
       
       setPendingRequests(Array.isArray(pendingRes.data) ? pendingRes.data : []);
@@ -30,7 +32,6 @@ const Dashboard = () => {
       
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // En caso de error, también inicializa con arrays vacíos para evitar fallos.
       setPendingRequests([]);
       setMyExchanges([]);
     } finally {
@@ -41,7 +42,7 @@ const Dashboard = () => {
   const handleAcceptRequest = async (requestId) => {
     setActionLoading(true);
     try {
-      await api.put(`/exchanges/accept/${requestId}`);
+      await api.put(ENDPOINTS.exchanges.accept(requestId));
       await fetchDashboardData();
       setSelectedRequest(null);
     } catch (error) {
@@ -55,7 +56,7 @@ const Dashboard = () => {
   const handleRejectRequest = async (requestId) => {
     setActionLoading(true);
     try {
-      await api.put(`/exchanges/reject/${requestId}`);
+      await api.put(ENDPOINTS.exchanges.reject(requestId));
       await fetchDashboardData();
       setSelectedRequest(null);
     } catch (error) {
@@ -66,7 +67,6 @@ const Dashboard = () => {
     }
   };
 
-  // Función para manejar contacto directo desde el dashboard
   const handleQuickContact = (exchange, contactType) => {
     const otherUser = exchange.sender._id === user._id ? exchange.recipient : exchange.sender;
     
@@ -104,20 +104,15 @@ Sobre nuestro intercambio en Skill Exchange:
     }
   };
 
-  // Función para navegar al perfil (CORREGIDA)
-  const handleViewProfile = (userId) => {
-    navigate(`/profile/${userId}`);
-  };
-
   const getStatusBadge = (status) => {
     const statusMap = {
-      'pending': 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium',
-      'accepted': 'bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium',
-      'rejected': 'bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium',
-      'completed': 'bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium'
+      'pending': 'bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium',
+      'accepted': 'bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium',
+      'rejected': 'bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium',
+      'completed': 'bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium'
     };
     
-    const className = statusMap[status] || 'bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium';
+    const className = statusMap[status] || 'bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-xs font-medium';
     const text = status === 'pending' ? 'Pendiente' : 
                  status === 'accepted' ? 'Aceptado' : 
                  status === 'rejected' ? 'Rechazado' : 
@@ -134,40 +129,6 @@ Sobre nuestro intercambio en Skill Exchange:
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    return (
-      <div className="relative">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt={`Avatar de ${userData.name}`}
-            className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        )}
-        <div 
-          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
-        >
-          {userData.name?.charAt(0).toUpperCase() || 'U'}
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
@@ -255,7 +216,7 @@ Sobre nuestro intercambio en Skill Exchange:
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Solicitudes Recibidas - CORREGIDAS */}
+          {/* Solicitudes Recibidas */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -276,7 +237,7 @@ Sobre nuestro intercambio en Skill Exchange:
                     <div key={request._id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                       <div className="flex items-start space-x-4">
                         <div className="flex-shrink-0">
-                          {renderAvatarWithFallback(request.sender)}
+                          <Avatar user={request.sender} size="md" />
                         </div>
                         
                         <div className="flex-grow min-w-0">
@@ -313,8 +274,6 @@ Sobre nuestro intercambio en Skill Exchange:
                           </div>
                           
                           <div className="flex flex-wrap gap-2">
-                            {/* CORREGIDO: Usar navigate en lugar de target="_blank" */}
-                            
                             <button 
                               className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
                               onClick={() => setSelectedRequest(request)}
@@ -331,7 +290,7 @@ Sobre nuestro intercambio en Skill Exchange:
             </div>
           </div>
 
-          {/* Mis Intercambios - MEJORADO */}
+          {/* Mis Intercambios */}
           <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -363,7 +322,7 @@ Sobre nuestro intercambio en Skill Exchange:
                       <div key={exchange._id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
                         <div className="flex items-start space-x-4">
                           <div className="flex-shrink-0">
-                            {renderAvatarWithFallback(otherUser)}
+                            <Avatar user={otherUser} size="md" />
                           </div>
                           
                           <div className="flex-grow min-w-0">
@@ -384,7 +343,6 @@ Sobre nuestro intercambio en Skill Exchange:
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-gray-500">{formatDate(exchange.date)}</span>
                               
-                              {/* Botones de contacto mejorados */}
                               {exchange.status === 'accepted' && (
                                 <div className="flex space-x-2">
                                   <button
@@ -500,7 +458,7 @@ Sobre nuestro intercambio en Skill Exchange:
                 
                 <div className="text-center">
                   <div className="mb-4">
-                    {renderAvatarWithFallback(selectedRequest.sender, 'w-20 h-20')}
+                    <Avatar user={selectedRequest.sender} size="xl" />
                   </div>
                   <h5 className="font-bold text-gray-900 mb-2">{selectedRequest.sender.name}</h5>
                   <p className="text-gray-600 text-sm mb-4">{selectedRequest.sender.email}</p>

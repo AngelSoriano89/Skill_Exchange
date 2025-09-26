@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { buildAvatarUrl } from '../../api/api';
 import { AuthContext } from '../../context/AuthContext';
 
 const UserContactPage = () => {
@@ -13,13 +14,7 @@ const UserContactPage = () => {
   const [completing, setCompleting] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
-  useEffect(() => {
-    if (user && exchangeId) {
-      fetchExchangeDetails();
-    }
-  }, [exchangeId, user]);
-
-  const fetchExchangeDetails = async () => {
+  const fetchExchangeDetails = useCallback(async () => {
     try {
       const res = await api.get(`/exchanges/${exchangeId}`);
       setExchange(res.data);
@@ -29,7 +24,13 @@ const UserContactPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [exchangeId]);
+
+  useEffect(() => {
+    if (user && exchangeId) {
+      fetchExchangeDetails();
+    }
+  }, [exchangeId, user, fetchExchangeDetails]);
 
   const handleCompleteExchange = async () => {
     setCompleting(true);
@@ -47,39 +48,34 @@ const UserContactPage = () => {
     }
   };
 
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatarWithFallback = (userData) => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    return (
-      <div className="relative">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt={`Avatar de ${userData.name}`}
-            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        )}
-        <div 
-          className={`fallback-avatar w-24 h-24 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg ${avatarUrl ? 'hidden' : 'flex'}`}
-        >
-          {userData.name?.charAt(0).toUpperCase() || 'U'}
-        </div>
+const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
+  if (!userData) return null;
+  
+  const cacheKey = userData?.updatedAt || userData?.date || userData?._id || '';
+  const avatarUrl = userData.avatar ? buildAvatarUrl(userData.avatar, cacheKey) : null;
+  
+  return (
+    <div className="relative">
+      {avatarUrl && (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${userData.name}`}
+          className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      )}
+      <div 
+        className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
+      >
+        {userData.name?.charAt(0).toUpperCase() || 'U'}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const handleSendEmail = (otherUser) => {
     const subject = encodeURIComponent('Intercambio de Habilidades - Skill Exchange');

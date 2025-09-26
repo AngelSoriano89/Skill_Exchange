@@ -33,11 +33,15 @@ exports.createExchangeRequest = async (req, res) => {
       return res.status(400).json({ msg: 'El usuario no está disponible para intercambios' });
     }
 
+    // Convertir IDs a ObjectId para evitar discrepancias de tipos
+    const senderObjectId = new mongoose.Types.ObjectId(req.user.id);
+    const recipientObjectId = new mongoose.Types.ObjectId(recipientId);
+
     // Verificar si ya existe una solicitud pendiente entre estos usuarios
     const existingRequest = await Exchange.findOne({
       $or: [
-        { sender: req.user.id, recipient: recipientId, status: 'pending' },
-        { sender: recipientId, recipient: req.user.id, status: 'pending' }
+        { sender: senderObjectId, recipient: recipientObjectId, status: 'pending' },
+        { sender: recipientObjectId, recipient: senderObjectId, status: 'pending' }
       ]
     });
 
@@ -75,8 +79,8 @@ exports.createExchangeRequest = async (req, res) => {
     };
 
     const newExchange = new Exchange({
-      sender: req.user.id,
-      recipient: recipientId,
+      sender: senderObjectId,
+      recipient: recipientObjectId,
       skills_to_offer: cleanSkillsToOffer,
       skills_to_learn: cleanSkillsToLearn,
       message: message.trim(),
@@ -87,13 +91,17 @@ exports.createExchangeRequest = async (req, res) => {
 
     await newExchange.save();
     
-    // ✅ OPTIMIZADO: Poblar en una sola operación
+        // ✅ OPTIMIZADO: Poblar en una sola operación
     await newExchange.populate([
       { path: 'sender', select: 'name email avatar' },
       { path: 'recipient', select: 'name email avatar' }
     ]);
     
-    res.status(201).json(newExchange);
+    // ✅ PREVENIR: Eliminar virtuals problemáticas que puedan causar errores
+    const responseData = newExchange.toObject();
+    delete responseData.duration; // Evita el error 'toFixed' de undefined
+    
+    res.status(201).json(responseData);
   } catch (err) {
     console.error('Error creating exchange request:', err.message);
     
@@ -112,48 +120,34 @@ exports.createExchangeRequest = async (req, res) => {
     });
   }
 };
-
 // @route   GET api/exchanges/my-requests
 // @desc    Obtener solicitudes de intercambio enviadas y recibidas del usuario actual
 // @access  Private
 exports.getMyExchanges = async (req, res) => {
   try {
-    const { status, limit = 50, page = 1 } = req.query;
+    // Verificar si el modelo Skill está registrado
+    const Skill = mongoose.models.Skill || mongoose.model('Skill', require('../models/Skill').schema);
     
-    // ✅ AGREGADO: Construir filtro dinámico
-    const filter = {
-      $or: [{ sender: req.user.id }, { recipient: req.user.id }]
-    };
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     
-    if (status && status !== 'all') {
-      filter.status = status;
-    }
-
-    // ✅ OPTIMIZADO: Usar agregación para mejor performance
-    const skip = (page - 1) * limit;
+    // Obtener intercambios donde el usuario es el remitente o el destinatario
+    let exchanges = await Exchange.find({
+      $or: [
+        { sender: userId },
+        { recipient: userId }
+      ]
+    })
+      .populate('sender', 'name email avatar')
+      .populate('recipient', 'name email avatar')
+      .populate({
+        path: 'skill',
+        select: 'title category level',
+        model: Skill // Referencia explícita al modelo
+      })
+      .sort({ date: -1 })
+      .lean();
     
-    const [exchanges, total] = await Promise.all([
-      Exchange.find(filter)
-        .populate('sender', 'name email skills_to_offer skills_to_learn avatar averageRating')
-        .populate('recipient', 'name email skills_to_offer skills_to_learn avatar averageRating')
-        .populate('skill', 'title category level')
-        .sort({ date: -1 })
-        .limit(parseInt(limit))
-        .skip(skip)
-        .lean(), // ✅ OPTIMIZACIÓN: usar lean() para mejor performance
-      
-      Exchange.countDocuments(filter)
-    ]);
-      
-    res.json({
-      exchanges,
-      pagination: {
-        current: parseInt(page),
-        total,
-        pages: Math.ceil(total / limit),
-        limit: parseInt(limit)
-      }
-    });
+    res.json(exchanges);
   } catch (err) {
     console.error('Error getting exchanges:', err.message);
     res.status(500).json({ 
@@ -168,16 +162,44 @@ exports.getMyExchanges = async (req, res) => {
 // @access  Private
 exports.getPendingRequests = async (req, res) => {
   try {
-    const exchanges = await Exchange.find({
-      recipient: req.user.id,
+    // Verificar si el modelo Skill está registrado
+    const Skill = mongoose.models.Skill || mongoose.model('Skill', require('../models/Skill').schema);
+    
+    // ✅ OPTIMIZACIÓN: Usar lean() para mejor rendimiento
+    let exchanges = await Exchange.find({
+      recipient: new mongoose.Types.ObjectId(req.user.id),
       status: 'pending'
     })
       .populate('sender', 'name email skills_to_offer skills_to_learn avatar averageRating totalExchanges')
       .populate('recipient', 'name email avatar')
-      .populate('skill', 'title category level')
+      .populate({
+        path: 'skill',
+        select: 'title category level',
+        model: Skill // Referencia explícita al modelo
+      })
       .sort({ date: -1 })
-      .lean(); // ✅ OPTIMIZACIÓN: usar lean()
+      .lean();
+    
+    // ✅ SEGURIDAD: Limpiar datos sensibles y asegurar consistencia
+    exchanges = exchanges.map(exchange => {
+      // Eliminar virtuals problemáticas
+      const { duration, ...safeExchange } = exchange;
       
+      // Asegurar que las fechas sean válidas
+      if (safeExchange.exchangeDetails) {
+        if (safeExchange.exchangeDetails.startDate && isNaN(new Date(safeExchange.exchangeDetails.startDate).getTime())) {
+          console.warn('Fecha de inicio inválida en exchange:', safeExchange._id);
+          delete safeExchange.exchangeDetails.startDate;
+        }
+        if (safeExchange.exchangeDetails.endDate && isNaN(new Date(safeExchange.exchangeDetails.endDate).getTime())) {
+          console.warn('Fecha de fin inválida en exchange:', safeExchange._id);
+          delete safeExchange.exchangeDetails.endDate;
+        }
+      }
+      
+      return safeExchange;
+    });
+    
     res.json(exchanges);
   } catch (err) {
     console.error('Error getting pending requests:', err.message);

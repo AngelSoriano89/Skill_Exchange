@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { ENDPOINTS } from '../../api/api';
+import Avatar from '../../components/Common/Avatar';
 
 const ProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser, updateUser } = useContext(AuthContext);
+  const { user: currentUser } = useContext(AuthContext);
   
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,25 +18,16 @@ const ProfilePage = () => {
   const profileId = id || currentUser?._id;
   const isOwnProfile = currentUser && profileId === currentUser._id;
 
-  useEffect(() => {
-    if (profileId) {
-      fetchUserProfile();
-      if (currentUser && !isOwnProfile) {
-        fetchExchangeHistory();
-      }
-    }
-  }, [profileId, currentUser, isOwnProfile]);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
       let userData;
       
       if (isOwnProfile) {
-        const response = await api.get('/users/me');
+        const response = await api.get(ENDPOINTS.users.me);
         userData = response.data;
       } else {
-        const response = await api.get(`/users/${profileId}`);
+        const response = await api.get(ENDPOINTS.users.byId(profileId));
         userData = response.data;
       }
       
@@ -45,11 +38,11 @@ const ProfilePage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isOwnProfile, profileId]);
 
-  const fetchExchangeHistory = async () => {
+  const fetchExchangeHistory = useCallback(async () => {
     try {
-      const response = await api.get('/exchanges/my-requests');
+      const response = await api.get(ENDPOINTS.exchanges.myRequests);
       const relatedExchanges = response.data.filter(exchange => 
         (exchange.sender._id === profileId || exchange.recipient._id === profileId) &&
         (exchange.sender._id === currentUser._id || exchange.recipient._id === currentUser._id)
@@ -58,55 +51,28 @@ const ProfilePage = () => {
     } catch (err) {
       console.error('Error fetching exchange history:', err);
     }
-  };
+  }, [profileId, currentUser]);
 
-  // CORREGIDO: Navegar a una nueva página en lugar de mostrar modal
+  // Ejecutar cargas una vez definidas las funciones para evitar lint 'used before defined'
+  useEffect(() => {
+    if (profileId) {
+      fetchUserProfile();
+      if (currentUser && !isOwnProfile) {
+        fetchExchangeHistory();
+      }
+    }
+  }, [profileId, currentUser, isOwnProfile, fetchUserProfile, fetchExchangeHistory]);
+
   const handleSendRequest = () => {
     if (!currentUser) {
       navigate('/login');
       return;
     }
-    // Navegar a una nueva página de solicitud de intercambio
     navigate(`/exchange/request/${profileId}`);
   };
 
   const handleEditProfile = () => {
-    // Navegar a la página de edición en lugar de abrir un modal
     navigate('/profile/edit');
-  };
-
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatarWithFallback = (userData, sizeClasses = 'w-32 h-32') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    return (
-      <div className="relative">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt={`Avatar de ${userData.name}`}
-            className={`${sizeClasses} rounded-full object-cover border-4 border-white shadow-xl`}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        )}
-        <div 
-          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-4xl font-bold border-4 border-white shadow-xl ${avatarUrl ? 'hidden' : 'flex'}`}
-        >
-          {userData.name?.charAt(0).toUpperCase() || 'U'}
-        </div>
-      </div>
-    );
   };
 
   const getExchangeStatusBadge = (status) => {
@@ -132,6 +98,33 @@ const ProfilePage = () => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Formatear número de teléfono para visualización
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '';
+    
+    // Si ya tiene el símbolo +, asumimos que ya está formateado con código de país
+    if (phone.startsWith('+')) return phone;
+    
+    // Si no tiene código de país, usar el del perfil o el predeterminado
+    const countryCode = profileUser?.countryCode || '+52';
+    return phone ? `${countryCode}${phone}` : '';
+  };
+  
+  // Generar enlace de WhatsApp
+  const getWhatsAppLink = (phone) => {
+    if (!phone) return '#';
+    
+    // Asegurarse de que el número tenga el formato correcto (solo dígitos, sin espacios ni caracteres especiales)
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Si el número ya tiene código de país (empieza con +), usarlo, si no, agregar el código por defecto
+    const phoneWithCountryCode = phone.startsWith('+') 
+      ? cleanPhone 
+      : `${profileUser?.countryCode?.replace(/\D/g, '') || '52'}${cleanPhone}`;
+    
+    return `https://wa.me/${phoneWithCountryCode}?text=Hola%20${encodeURIComponent(profileUser?.name || '')}%2C%20vi%20tu%20perfil%20en%20InterHabil%20y%20me%20gustar%C3%ADa%20ponerme%20en%20contacto%20contigo.`;
   };
 
   if (loading) {
@@ -177,7 +170,10 @@ const ProfilePage = () => {
               <div className="card p-8 animate-fade-in-up">
                 <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
                   <div className="flex-shrink-0 text-center">
-                    {renderAvatarWithFallback(profileUser)}
+                    <Avatar 
+                      user={profileUser} 
+                      size="2xl"
+                    />
                     {isOwnProfile && (
                       <button
                         onClick={handleEditProfile}
@@ -204,10 +200,23 @@ const ProfilePage = () => {
                             {profileUser.email}
                           </p>
                           {profileUser.phone && (
-                            <p className="flex items-center justify-center md:justify-start">
-                              <i className="fas fa-phone mr-2 text-green-600"></i>
-                              {profileUser.phone}
-                            </p>
+                            <div className="flex flex-col space-y-1">
+                              <p className="flex items-center">
+                                <i className="fas fa-phone mr-2 text-green-600"></i>
+                                {formatPhoneNumber(profileUser.phone)}
+                              </p>
+                              {!isOwnProfile && (
+                                <a 
+                                  href={getWhatsAppLink(profileUser.phone)}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-sm text-green-600 hover:text-green-800 transition-colors"
+                                >
+                                  <i className="fab fa-whatsapp mr-1 text-lg"></i>
+                                  Enviar mensaje por WhatsApp
+                                </a>
+                              )}
+                            </div>
                           )}
                           {profileUser.location && (
                             <p className="flex items-center justify-center md:justify-start">

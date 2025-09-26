@@ -137,6 +137,7 @@ exports.updateUserProfile = async (req, res) => {
       name, 
       bio, 
       phone, 
+      countryCode,
       location, 
       experience,
       skills_to_offer, 
@@ -161,7 +162,8 @@ exports.updateUserProfile = async (req, res) => {
     // Actualizar campos básicos
     if (name !== undefined) user.name = name;
     if (bio !== undefined) user.bio = bio;
-    if (phone !== undefined) user.phone = phone;
+    if (phone !== undefined) user.phone = phone.replace(/\D/g, ''); // Limpiar el número de teléfono
+    if (countryCode !== undefined) user.countryCode = countryCode;
     if (location !== undefined) user.location = location;
     if (experience !== undefined) user.experience = experience;
 

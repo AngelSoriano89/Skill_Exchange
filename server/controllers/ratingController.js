@@ -6,7 +6,7 @@ const Skill = require('../models/Skill');
 // @route   POST /api/ratings
 // @desc    Calificar un intercambio
 // @access  Private
-export const rateExchange = async (req, res) => {
+exports.rateExchange = async (req, res) => {
   const { exchangeId, rating, comment } = req.body;
   
   try {
@@ -74,7 +74,7 @@ export const rateExchange = async (req, res) => {
 // @route   GET /api/ratings/user/:userId
 // @desc    Obtener las calificaciones recibidas por un usuario
 // @access  Public
-export const getUserRatings = async (req, res) => {
+exports.getUserRatings = async (req, res) => {
   try {
     const userId = req.params.userId;
     

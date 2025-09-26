@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import UserCard from '../../components/User/UserCard';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { ENDPOINTS } from '../../api/api';
 
 const SearchPage = () => {
   const { user } = useContext(AuthContext);
@@ -28,7 +29,7 @@ const SearchPage = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users');
+      const response = await api.get(ENDPOINTS.users.list);
       const allUsers = response.data.filter(u => u._id !== user?._id);
       setUsers(allUsers);
       setFilteredUsers(allUsers);
@@ -352,19 +353,19 @@ const SearchPage = () => {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-primary-700">🔍 Sé específico</h4>
+                  <h4 className="font-semibold text-primary-700">Sé específico</h4>
                   <p className="text-sm text-gray-600">
                     Busca "Guitar acústica" en lugar de solo "Guitarra" para resultados más precisos.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-green-700">🎯 Usa filtros</h4>
+                  <h4 className="font-semibold text-green-700">Usa filtros</h4>
                   <p className="text-sm text-gray-600">
                     Filtra por "Habilidades Ofrecidas" si buscas un maestro específico.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-blue-700">💬 Lee perfiles</h4>
+                  <h4 className="font-semibold text-blue-700">Lee perfiles</h4>
                   <p className="text-sm text-gray-600">
                     Revisa las biografías para encontrar personas con intereses similares.
                   </p>

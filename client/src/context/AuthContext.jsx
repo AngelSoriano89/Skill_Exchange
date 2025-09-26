@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../api/api';
+import api from '../api/api.jsx';
+import { ENDPOINTS } from '../api/api.js';
 
 export const AuthContext = createContext({ user: null });
 
@@ -7,62 +8,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
-
-  // ✅ AGREGADO: Estado para rastrear errores de conexión
   const [connectionError, setConnectionError] = useState(false);
 
-  useEffect(() => {
-    if (token) {
-      checkAuthStatus();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+  // Nota: definimos clearAuthData antes de checkAuthStatus para evitar advertencias del linter
 
-  // ✅ MEJORADO: Función para verificar estado de autenticación
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      setLoading(true);
-      setConnectionError(false);
-      
-      const res = await api.get('/auth/me');
-      setUser(res.data);
-      
-      // ✅ AGREGADO: Actualizar último login
-      if (res.data) {
-        await api.put('/users/me', { 
-          lastLogin: new Date().toISOString() 
-        }).catch(() => {}); // No fallar si no se puede actualizar
-      }
-      
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      
-      // ✅ MEJORADO: Manejo específico de tipos de errores
-      if (error.isNetworkError) {
-        setConnectionError(true);
-        // No limpiar token en errores de red, mantener sesión
-        return;
-      }
-      
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        // Token inválido o expirado
-        console.log('Token inválido, limpiando sesión');
-        clearAuthData();
-      } else if (error.response?.status >= 500) {
-        // Error del servidor
-        setConnectionError(true);
-      } else {
-        // Otros errores
-        clearAuthData();
-      }
-      
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // ✅ AGREGADO: Función helper para limpiar datos de autenticación
+  // Función helper para limpiar datos de autenticación
   const clearAuthData = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
@@ -70,13 +20,55 @@ export const AuthProvider = ({ children }) => {
     setConnectionError(false);
   }, []);
 
-  // ✅ MEJORADO: Función de login con mejor manejo de errores
+  // Función para verificar estado de autenticación
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      setLoading(true);
+      setConnectionError(false);
+      
+      const res = await api.get(ENDPOINTS.auth.me);
+      setUser(res.data);
+      // Nota: ya no actualizamos lastLogin desde el cliente.
+      // El servidor actualiza lastLogin durante el login para evitar validaciones innecesarias.
+      
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      
+      if (error.code === 'ERR_NETWORK' || !error.response) {
+        setConnectionError(true);
+        return; // No limpiar token en errores de red
+      }
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('Token inválido, limpiando sesión');
+        clearAuthData();
+      } else if (error.response?.status >= 500) {
+        setConnectionError(true);
+      } else {
+        clearAuthData();
+      }
+      
+    } finally {
+      setLoading(false);
+    }
+  }, [clearAuthData]);
+
+  // Inicializar estado de autenticación cuando cambie el token
+  useEffect(() => {
+    if (token) {
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
+  }, [token, checkAuthStatus]);
+
+  // Función de login
   const login = async (email, password) => {
     try {
       setLoading(true);
       setConnectionError(false);
       
-      // ✅ AGREGADO: Validaciones básicas del lado cliente
+      // Validaciones básicas del lado cliente
       if (!email || !email.trim()) {
         return {
           success: false,
@@ -91,7 +83,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
       
-      const res = await api.post('/auth/login', { 
+      const res = await api.post(ENDPOINTS.auth.login, { 
         email: email.trim().toLowerCase(), 
         password 
       });
@@ -102,7 +94,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Token no recibido del servidor');
       }
       
-      // ✅ MEJORADO: Validar formato del token JWT
+      // Validar formato del token JWT
       if (!isValidJWT(newToken)) {
         throw new Error('Token inválido recibido del servidor');
       }
@@ -111,7 +103,7 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       
       // Obtener datos del usuario después del login
-      const userRes = await api.get('/auth/me');
+      const userRes = await api.get(ENDPOINTS.auth.me);
       setUser(userRes.data);
       
       return { success: true };
@@ -119,13 +111,11 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error);
       
-      // ✅ MEJORADO: Limpiar datos en caso de error
       clearAuthData();
       
-      // ✅ MEJORADO: Manejo de errores más específico y user-friendly
       let errorMessage = 'Error al iniciar sesión';
       
-      if (error.isNetworkError) {
+      if (error.code === 'ERR_NETWORK' || !error.response) {
         errorMessage = 'Sin conexión a internet. Verifica tu conexión.';
         setConnectionError(true);
       } else if (error.response?.status === 401) {
@@ -153,13 +143,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ MEJORADO: Función de registro con validaciones mejoradas
+  // Función de registro
   const register = async (userData) => {
     try {
       setLoading(true);
       setConnectionError(false);
       
-      // ✅ AGREGADO: Validaciones del lado cliente
+      // Validaciones del lado cliente
       const validation = validateRegistrationData(userData);
       if (!validation.isValid) {
         return {
@@ -168,7 +158,7 @@ export const AuthProvider = ({ children }) => {
         };
       }
       
-      // ✅ AGREGADO: Preparar datos para envío
+      // Preparar datos para envío
       const cleanedData = {
         name: userData.name.trim(),
         email: userData.email.trim().toLowerCase(),
@@ -179,7 +169,7 @@ export const AuthProvider = ({ children }) => {
         skills_to_learn: userData.skills_to_learn || []
       };
       
-      const res = await api.post('/auth/register', cleanedData);
+      const res = await api.post(ENDPOINTS.auth.register, cleanedData);
       const { token: newToken } = res.data;
       
       if (!newToken) {
@@ -194,7 +184,7 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       
       // Obtener datos del usuario después del registro
-      const userRes = await api.get('/auth/me');
+      const userRes = await api.get(ENDPOINTS.auth.me);
       setUser(userRes.data);
       
       return { success: true };
@@ -204,10 +194,9 @@ export const AuthProvider = ({ children }) => {
       
       clearAuthData();
       
-      // ✅ MEJORADO: Manejo de errores específicos para registro
       let errorMessage = 'Error al registrarse';
       
-      if (error.isNetworkError) {
+      if (error.code === 'ERR_NETWORK' || !error.response) {
         errorMessage = 'Sin conexión a internet. Verifica tu conexión.';
         setConnectionError(true);
       } else if (error.response?.status === 400) {
@@ -238,7 +227,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ AGREGADO: Función para validar datos de registro
+  // Función para validar datos de registro
   const validateRegistrationData = (data) => {
     if (!data.name || data.name.trim().length < 2) {
       return { isValid: false, error: 'El nombre debe tener al menos 2 caracteres' };
@@ -259,13 +248,13 @@ export const AuthProvider = ({ children }) => {
     return { isValid: true };
   };
 
-  // ✅ AGREGADO: Función para validar email
+  // Función para validar email
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // ✅ AGREGADO: Función para validar formato JWT
+  // Función para validar formato JWT
   const isValidJWT = (token) => {
     try {
       const parts = token.split('.');
@@ -279,7 +268,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ MEJORADO: Función para actualizar usuario
+  // Función para actualizar usuario
   const updateUser = useCallback((updatedUserData) => {
     if (updatedUserData && typeof updatedUserData === 'object') {
       setUser(prevUser => ({
@@ -289,19 +278,19 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ MEJORADO: Función de logout
+  // Función de logout
   const logout = useCallback(() => {
     try {
-      // ✅ AGREGADO: Notificar al servidor sobre el logout (opcional)
+      // Notificar al servidor sobre el logout (opcional)
       if (token) {
-        api.post('/auth/logout').catch(() => {}); // No fallar si no se puede notificar
+        api.post(ENDPOINTS.auth.logout).catch(() => {}); // No fallar si no se puede notificar
       }
     } finally {
       clearAuthData();
     }
   }, [token, clearAuthData]);
 
-  // ✅ AGREGADO: Función para verificar si el token está expirado
+  // Función para verificar si el token está expirado
   const isTokenExpired = useCallback(() => {
     if (!token) return true;
     
@@ -309,7 +298,7 @@ export const AuthProvider = ({ children }) => {
       const tokenData = JSON.parse(atob(token.split('.')[1]));
       const currentTime = Date.now() / 1000;
       
-      // ✅ AGREGADO: Margen de 5 minutos antes de la expiración
+      // Margen de 5 minutos antes de la expiración
       return tokenData.exp < (currentTime + 300);
     } catch (error) {
       console.error('Error parsing token:', error);
@@ -317,7 +306,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // ✅ AGREGADO: Auto-logout cuando el token expira
+  // Auto-logout cuando el token expira
   useEffect(() => {
     if (token && isTokenExpired()) {
       console.log('Token expirado, cerrando sesión automáticamente...');
@@ -325,7 +314,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token, isTokenExpired, logout]);
 
-  // ✅ AGREGADO: Verificar token cada 5 minutos
+  // Verificar token cada 5 minutos
   useEffect(() => {
     if (!token || !user) return;
 
@@ -339,27 +328,7 @@ export const AuthProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [token, user, isTokenExpired, logout]);
 
-  // ✅ AGREGADO: Función para refrescar token (para futuras implementaciones)
-  const refreshToken = useCallback(async () => {
-    try {
-      const res = await api.post('/auth/refresh');
-      const { token: newToken } = res.data;
-      
-      if (newToken && isValidJWT(newToken)) {
-        localStorage.setItem('token', newToken);
-        setToken(newToken);
-        return { success: true };
-      } else {
-        throw new Error('Token inválido recibido');
-      }
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      logout();
-      return { success: false };
-    }
-  }, [logout]);
-
-  // ✅ AGREGADO: Función para retry de conexión
+  // Función para retry de conexión
   const retryConnection = useCallback(() => {
     if (token) {
       setConnectionError(false);
@@ -383,17 +352,16 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
     token,
     isTokenExpired,
-    refreshToken,
     retryConnection,
     
-    // ✅ AGREGADO: Función para verificar permisos
+    // Función para verificar permisos
     hasPermission: useCallback((permission) => {
       if (!user) return false;
       // Implementar lógica de permisos según sea necesario
       return true;
     }, [user]),
     
-    // ✅ AGREGADO: Estado de la cuenta
+    // Estado de la cuenta
     isEmailVerified: user?.isEmailVerified || false,
     isActive: user?.isActive || false
   };

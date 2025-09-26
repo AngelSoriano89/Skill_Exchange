@@ -1,38 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getUsers, 
-  getLoggedInUser, 
+const {
+  getUsers,
+  getLoggedInUser,
   getUserById,
   updateUserProfile,
   getUserStats,
   uploadAvatar
 } = require('../controllers/userController');
 const auth = require('../middleware/auth');
+const { handleMulterError } = require('../middleware/upload');
 
-// @route   GET api/users
-// @desc    Obtener todos los usuarios con búsqueda opcional
-// @access  Public
+// GET /api/users - Obtener todos los usuarios
 router.get('/', getUsers);
 
-// @route   GET api/users/me
-// @desc    Obtener el perfil del usuario actual
-// @access  Private
+// GET /api/users/me - Obtener perfil del usuario actual
 router.get('/me', auth, getLoggedInUser);
 
-// @route   PUT api/users/me
-// @desc    Actualizar el perfil del usuario actual (con upload de avatar)
-// @access  Private
-router.put('/me', auth, uploadAvatar, updateUserProfile);
+// PUT /api/users/me - Actualizar perfil del usuario actual
+router.put('/me', auth, uploadAvatar, handleMulterError, updateUserProfile);
 
-// @route   GET api/users/stats
-// @desc    Obtener estadísticas del usuario actual
-// @access  Private
+// GET /api/users/stats - Obtener estadísticas del usuario
 router.get('/stats', auth, getUserStats);
 
-// @route   GET api/users/:id
-// @desc    Obtener el perfil de un usuario por su ID
-// @access  Public
+// GET /api/users/:id - Obtener usuario por ID
 router.get('/:id', getUserById);
 
 module.exports = router;

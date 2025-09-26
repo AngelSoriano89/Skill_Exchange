@@ -1,15 +1,41 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { buildAvatarUrl } from '../../api/api';
 
 const EditProfile = () => {
   const { user, updateUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Lista de códigos de país comunes
+  const countryCodes = [
+    { code: '+52', name: 'México (+52)' },
+    { code: '+1', name: 'Estados Unidos/Canadá (+1)' },
+    { code: '+34', name: 'España (+34)' },
+    { code: '+54', name: 'Argentina (+54)' },
+    { code: '+55', name: 'Brasil (+55)' },
+    { code: '+56', name: 'Chile (+56)' },
+    { code: '+57', name: 'Colombia (+57)' },
+    { code: '+58', name: 'Venezuela (+58)' },
+    { code: '+51', name: 'Perú (+51)' },
+    { code: '+591', name: 'Bolivia (+591)' },
+    { code: '+593', name: 'Ecuador (+593)' },
+    { code: '+595', name: 'Paraguay (+595)' },
+    { code: '+598', name: 'Uruguay (+598)' },
+    { code: '+503', name: 'El Salvador (+503)' },
+    { code: '+504', name: 'Honduras (+504)' },
+    { code: '+505', name: 'Nicaragua (+505)' },
+    { code: '+506', name: 'Costa Rica (+506)' },
+    { code: '+507', name: 'Panamá (+507)' },
+    { code: '+53', name: 'Cuba (+53)' },
+    { code: '+502', name: 'Guatemala (+502)' }
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
+    countryCode: '+52', // Default to Mexico
     phone: '',
     location: '',
     experience: 'Principiante',
@@ -32,30 +58,47 @@ const EditProfile = () => {
     'Profesional'
   ];
 
+  // Inicializar formData cuando el usuario esté disponible
   useEffect(() => {
     if (!user) {
       navigate('/login');
       return;
     }
 
-    // Inicializar formData con datos del usuario
+    // Extraer solo el número de teléfono sin el código de país para mostrarlo en el input
+    let phoneNumber = user.phone || '';
+    const userCountryCode = user.countryCode || '+52';
+    
+    // Si el teléfono comienza con el código de país, lo eliminamos para mostrarlo por separado
+    if (phoneNumber.startsWith(userCountryCode)) {
+      phoneNumber = phoneNumber.replace(userCountryCode, '');
+    } else if (phoneNumber.startsWith('+')) {
+      // Si tiene otro código de país, lo dejamos como está
+      // y actualizamos el countryCode para que coincida
+      const codeMatch = phoneNumber.match(/^\+\d+/);
+      if (codeMatch) {
+        phoneNumber = phoneNumber.replace(codeMatch[0], '');
+      }
+    }
+    
     setFormData({
       name: user.name || '',
       bio: user.bio || '',
-      phone: user.phone || '',
+      countryCode: userCountryCode, // Usar el código de país del usuario
+      phone: phoneNumber, // Solo el número sin código de país
       location: user.location || '',
       experience: user.experience || 'Principiante',
       skills_to_offer: user.skills_to_offer ? user.skills_to_offer.join(', ') : '',
       skills_to_learn: user.skills_to_learn ? user.skills_to_learn.join(', ') : '',
       languages: user.languages ? user.languages.join(', ') : '',
-      interests: user.interests ? user.interests.join(', ') : '',
+      interests: user.interests ? user.interests.join(', ') : ''
     });
 
-    // Establecer preview del avatar actual
+    // Establecer preview del avatar actual con cache-busting
     if (user.avatar) {
-      const avatarUrl = user.avatar.startsWith('http') 
-        ? user.avatar 
-        : `http://localhost:5000${user.avatar}`;
+      const cacheKey = user.updatedAt || user.date || user._id || '';
+        const avatarUrl = buildAvatarUrl(user.avatar, cacheKey);
+        setAvatarPreview(avatarUrl);
       setAvatarPreview(avatarUrl);
     }
   }, [user, navigate]);
@@ -131,7 +174,19 @@ const EditProfile = () => {
       // Datos básicos
       updateData.append('name', formData.name.trim());
       updateData.append('bio', formData.bio.trim());
-      updateData.append('phone', formData.phone.trim());
+      
+      // Asegurar que el teléfono solo tenga dígitos y actualizar con el código de país
+      const cleanPhone = formData.phone.trim().replace(/\D/g, '');
+      updateData.append('phone', cleanPhone);
+      updateData.append('countryCode', formData.countryCode);
+      
+      // Agregar mensaje informativo en consola para depuración
+      console.log('Actualizando perfil con:', {
+        phone: cleanPhone,
+        countryCode: formData.countryCode,
+        fullPhone: formData.countryCode + cleanPhone
+      });
+      
       updateData.append('location', formData.location.trim());
       updateData.append('experience', formData.experience);
       
@@ -291,7 +346,7 @@ const EditProfile = () => {
 
                 {/* Basic Information */}
                 <div className="lg:col-span-2 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div>
                       <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
                         <i className="fas fa-user text-primary-600 mr-2"></i>
@@ -314,16 +369,35 @@ const EditProfile = () => {
                         <i className="fas fa-phone text-green-600 mr-2"></i>
                         Teléfono
                       </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                        placeholder="+1234567890"
-                        disabled={loading}
-                      />
+                      <div className="flex gap-2">
+                        <select
+                          id="countryCode"
+                          name="countryCode"
+                          value={formData.countryCode}
+                          onChange={handleChange}
+                          className="w-1/3 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white"
+                          disabled={loading}
+                        >
+                          {countryCodes.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="w-2/3 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                          placeholder="1234567890"
+                          disabled={loading}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Tu número será compartido solo con usuarios que hayas aceptado.
+                      </p>
                     </div>
 
                     <div>
