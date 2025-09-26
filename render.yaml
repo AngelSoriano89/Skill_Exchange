@@ -4,8 +4,8 @@ services:
     env: node
     buildCommand: |
       npm install
-  cd client && npm install --include=dev && npm run build
-  cd ../server && npm install --production
+      cd client && npm install && npm run build
+      cd ../server && npm install --production
     startCommand: cd server && node server.js
     envVars:
       - key: NODE_ENV
@@ -21,7 +21,9 @@ services:
       - key: API_PREFIX
         value: /api
       - key: FRONTEND_URL
-        value: https://Skill_Exchange.onrender.com
+        value: https://skill-exchange-6l3y.onrender.com
+      - key: CLIENT_URL
+        value: https://skill-exchange-6l3y.onrender.com
       - key: RATE_LIMIT_WINDOW_MS
         value: '900000'
       - key: RATE_LIMIT_MAX_REQUESTS

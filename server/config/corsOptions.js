@@ -1,73 +1,73 @@
-// ✅ CORREGIDO: Configuración CORS dinámica y robusta
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // ✅ Permitir requests sin origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+    console.log(`🔍 CORS - Verificando origin: ${origin}`);
+    console.log(`🔍 CORS - NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`🔍 CORS - FRONTEND_URL: ${process.env.FRONTEND_URL}`);
+    console.log(`🔍 CORS - CLIENT_URL: ${process.env.CLIENT_URL}`);
     
-    // ✅ Lista de orígenes permitidos según el entorno
+    // ✅ Permitir requests sin origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      console.log('✅ CORS - Request sin origin permitido');
+      return callback(null, true);
+    }
+    
+    // ✅ Lista de orígenes permitidos
     let allowedOrigins = [];
     
     if (process.env.NODE_ENV === 'production') {
-      // ✅ En producción, usar variables de entorno
-      const productionOrigins = [
-        process.env.CLIENT_URL,
+      // ✅ En producción - URLs específicas
+      allowedOrigins = [
         process.env.FRONTEND_URL,
-        process.env.CLIENT_URLS
+        process.env.CLIENT_URL,
+        // ✅ URL actual de Render
+        'https://skill-exchange-6l3y.onrender.com',
+        // ✅ Otras posibles URLs
+        'https://inter-habil.onrender.com',
+        'https://skill-exchange.onrender.com'
       ].filter(Boolean);
       
-      // ✅ Expandir CLIENT_URLS si tiene múltiples valores separados por coma
-      productionOrigins.forEach(envVar => {
-        if (envVar.includes(',')) {
-          allowedOrigins.push(...envVar.split(',').map(url => url.trim()));
-        } else {
-          allowedOrigins.push(envVar.trim());
-        }
-      });
+      console.log('🔍 CORS - Orígenes permitidos en producción:', allowedOrigins);
       
-      // ✅ Fallback si no hay variables configuradas
-      if (allowedOrigins.length === 0) {
-        console.warn('⚠️ No se encontraron orígenes configurados para producción');
-        allowedOrigins = ['https://localhost:3000']; // Fallback básico
-      }
     } else {
-      // ✅ En desarrollo, permitir orígenes locales comunes
+      // ✅ En desarrollo
       allowedOrigins = [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
         'http://127.0.0.1:3001',
-        'http://localhost:8080',
-        'http://127.0.0.1:8080',
-        'http://localhost',
-        'http://127.0.0.1',
-        // Agrega aquí tu dominio de producción cuando lo tengas
-        // 'https://tu-dominio-production.com'
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        // ✅ También permitir producción para testing
+        'https://skill-exchange-6l3y.onrender.com'
       ];
-    }
-    
-    // ✅ Log para debug (solo en desarrollo)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`CORS check for origin: ${origin}`);
+      
+      console.log('🔍 CORS - Orígenes permitidos en desarrollo:', allowedOrigins);
     }
 
-    // Verificar si el origin está en la lista permitida
+    // ✅ Verificar si el origin está permitido
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS - Origin permitido:', origin);
       return callback(null, true);
     } else {
-      console.log(`CORS: Origin no permitido: ${origin}`);
-      // ✅ CAMBIO: En desarrollo, permitir todos los origins para archivos estáticos
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Permitiendo origin en desarrollo:', origin);
-        return callback(null, true);
-      }
+      console.log(`❌ CORS - Origin no permitido: ${origin}`);
+      console.log(`❌ CORS - Lista de permitidos:`, allowedOrigins);
+      
       return callback(new Error('No permitido por CORS'));
     }
   },
   
-  // ✅ Credenciales habilitadas para autenticación
+  // ✅ Configuraciones adicionales
   credentials: true,
-  
-  // ✅ Código de éxito para requests OPTIONS
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'x-auth-token'
+  ],
   optionsSuccessStatus: 200,
 };
 
