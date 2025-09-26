@@ -1,247 +1,142 @@
 const express = require('express');
-const connectDB = require('./config/database');
 const cors = require('cors');
-// const corsOptions = require('./config/corsOptions'); // <-- ELIMINAR ESTA LÍNEA
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const path = require('path');
-const helmet = require('helmet'); // ✅ AGREGADO: Seguridad
-const rateLimit = require('express-rate-limit'); // ✅ AGREGADO: Rate limiting
-
 require('dotenv').config();
 
-const app = express();
+const connectDB = require('./config/database');
+const corsOptions = require('./config/corsOptions');
 
 // Conectar a la base de datos
 connectDB();
 
-// ✅ CORREGIDO: Configuración CORS mejorada
-const corsOptions = {
-  origin: function (origin, callback) {
-    // ✅ PERMITIR requests sin origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? (process.env.CLIENT_URLS || process.env.FRONTEND_URL || '').split(',').map(url => url.trim()).filter(Boolean)
-      : [
-          'http://localhost:3000',
-          'http://127.0.0.1:3000',
-          'http://localhost:3001',
-          'http://127.0.0.1:3001'
-        ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'X-Client-Type', 'X-Client-Version'],
-  // preflightContinue: false
-};
+const app = express();
 
-// ✅ AGREGADO: Middleware de seguridad
+// ✅ Prefijo de API configurable
+const API_PREFIX = process.env.API_PREFIX || '/api';
+
+// ✅ Configuración de seguridad
 app.use(helmet({
-  crossOriginEmbedderPolicy: false, // Para permitir uploads
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-    },
-  }
+  contentSecurityPolicy: false, // Desactivar para desarrollo
+  crossOriginEmbedderPolicy: false
 }));
 
-// ✅ AGREGADO: Rate limiting
+// ✅ Rate limiting
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // límite por ventana por IP
-  message: {
-    error: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: {
+    error: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// Aplicar rate limiting solo en producción
-if (process.env.NODE_ENV === 'production') {
-  app.use('/api/', limiter);
-}
+app.use(`${API_PREFIX}/`, limiter);
 
-// CORS debe ir ANTES de cualquier otra configuración de middleware
+// ✅ CORS
 app.use(cors(corsOptions));
 
-app.use('/uploads', (req, res, next) => {
-  // Permitir CORS para archivos estáticos
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-});
+// ✅ Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware para parsing del body
-app.use(express.json({ 
-  extended: false, 
-  limit: process.env.JSON_LIMIT || '50mb'
-}));
-app.use(express.urlencoded({ 
-  extended: true, 
-  limit: process.env.JSON_LIMIT || '50mb'
-}));
+// ✅ Sanitización
+app.use(mongoSanitize());
 
-// ✅ CORREGIDO: Servir archivos estáticos con headers apropiados
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '7d' : '0',
-  setHeaders: (res, path, filePath) => {
-    // ✅ Headers de seguridad para archivos
-    res.set('X-Content-Type-Options', 'nosniff');
-    res.set('X-Frame-Options', 'DENY');
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-    
-    // ✅ Cache headers
-    if (process.env.NODE_ENV === 'production') {
-      res.set('Cache-Control', 'public, max-age=604800'); // 7 días
-    }
-  }
-}));
-
-// ✅ MEJORADO: Middleware de logging condicional
+// ✅ Logging middleware (solo desarrollo)
 if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin') || 'No origin'}`);
-    next();
-  });
+  const morgan = require('morgan');
+  app.use(morgan('combined'));
 }
 
-// ✅ CORREGIDO: Ruta de health check mejorada
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    message: 'Servidor funcionando correctamente', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    version: process.env.npm_package_version || '1.0.0'
-  });
-});
-
-// ✅ MANTENIDO: Ruta de test
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'API funcionando correctamente', 
-    timestamp: new Date().toISOString() 
-  });
-});
-
-// ✅ CORREGIDO: Definir rutas de API
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/skills', require('./routes/skillRoutes'));
-app.use('/api/exchanges', require('./routes/exchangeRoutes'));
-app.use('/api/profile', require('./routes/profileRoutes')); // ✅ HABILITADO
-app.use('/api/ratings', require('./routes/ratingRoutes'));  // ✅ HABILITADO
-
-// Manejo de errores 404 para rutas API
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ 
-    msg: 'Ruta de API no encontrada',
-    path: req.originalUrl,
-    method: req.method
+// ✅ Health check endpoint
+app.get(`${API_PREFIX}/health`, (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Skill Exchange API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    version: process.env.API_VERSION || 'v1'
   });
 });
 
-// ✅ MEJORADO: Servir aplicación React en producción
-if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '..', 'client', 'build');
-  
-  // Verificar que la carpeta build existe
-  const fs = require('fs');
-  if (fs.existsSync(clientBuildPath)) {
-    app.use(express.static(clientBuildPath));
-    
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(clientBuildPath, 'index.html'));
-    });
-  } else {
-    console.warn('⚠️ Carpeta client/build no encontrada. Ejecuta "npm run build" en el frontend.');
-    app.get('*', (req, res) => {
-      res.status(503).json({ 
-        msg: 'Frontend no construido. Ejecuta npm run build en el cliente.' 
-      });
-    });
-  }
-} else {
-  app.get('/', (req, res) => {
-    res.json({ 
-      message: 'Skill Exchange API funcionando correctamente',
-      environment: 'development',
-      timestamp: new Date().toISOString(),
-      availableRoutes: [
-        'GET /api/test',
-        'POST /api/auth/register',
-        'POST /api/auth/login',
-        'GET /api/auth/me',
-        'GET /api/users',
-        'GET /api/users/me',
-        'PUT /api/users/me',
-        'GET /api/users/:id',
-        'GET /api/skills',
-        'POST /api/skills',
-        'GET /api/skills/categories',
-        'GET /api/exchanges/my-requests',
-        'POST /api/exchanges/request',
-        'PUT /api/exchanges/accept/:id',
-        'GET /api/profile/:id',
-        'PUT /api/profile/:id',
-        'POST /api/ratings',
-        'GET /api/ratings/user/:userId'
-      ]
-    });
-  });
-}
+// ✅ Static files (uploads) sin caché para evitar inconsistencias de avatar
+app.use('/uploads', (req, res, next) => {
+  // Evitar caché agresivo del navegador/CDN para contenidos que cambian con frecuencia
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 
-// ✅ MEJORADO: Middleware de manejo de errores global
+// ✅ Routes
+app.use(`${API_PREFIX}/auth`, require('./routes/authRoutes'));
+app.use(`${API_PREFIX}/users`, require('./routes/userRoutes'));
+app.use(`${API_PREFIX}/exchanges`, require('./routes/exchangeRoutes'));
+
+// ✅ Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   
-  // Error de CORS
-  if (err.message === 'No permitido por CORS') {
-    return res.status(403).json({ 
-      msg: 'Error de CORS: Origin no permitido',
-      origin: req.get('origin')
+  // Mongoose validation errors
+  if (err.name === 'ValidationError') {
+    const errors = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({
+      msg: 'Errores de validación',
+      errors
     });
-  }
-  
-  // Error de parsing JSON
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ msg: 'Invalid JSON' });
   }
 
-  // Error de Multer (subida de archivos)
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({ 
-      msg: 'Archivo demasiado grande',
-      maxSize: '5MB'
-    });
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({ msg: 'Token inválido' });
   }
-  
-  res.status(500).json({ 
-    msg: 'Error interno del servidor',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({ msg: 'Token expirado' });
+  }
+
+  // MongoDB duplicate key error
+  if (err.code === 11000) {
+    return res.status(400).json({ msg: 'Recurso duplicado' });
+  }
+
+  // Default error
+  res.status(err.status || 500).json({
+    msg: err.message || 'Error interno del servidor',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// ✅ MEJORADO: Puerto con fallback
+// ✅ 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    msg: `Ruta ${req.originalUrl} no encontrada` 
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor iniciado en el puerto ${PORT}`);
-  console.log(`📝 Modo: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 API disponible en: http://localhost:${PORT}/api`);
-  console.log(`🔧 Prueba la API en: http://localhost:${PORT}/api/test`);
-  console.log(`📋 Lista completa de rutas en: http://localhost:${PORT}/`);
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🌍 Ambiente: ${process.env.NODE_ENV}`);
+  console.log(`📊 Health check: http://localhost:${PORT}${API_PREFIX}/health`);
+});
+
+// ✅ Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('💤 Process terminated');
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('👋 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('💤 Process terminated');
+  });
 });

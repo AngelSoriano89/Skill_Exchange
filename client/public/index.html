@@ -5,28 +5,15 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#3b82f6" />
-    <meta
-      name="description"
-      content="Plataforma de intercambio de habilidades - Aprende y enseña con la comunidad"
-    />
+    <meta name="description" content="Plataforma de intercambio de habilidades - Aprende y enseña con la comunidad" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!-- <link href="../dist/output.css" rel="stylesheet"> -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css" integrity="sha512-9xKTRVabjVeZmc+GUW8GgSmcREDunMM+Dt/GrzchfN8tkwHizc5RP4Ok/MXFFy5rIjJjzhndFScTceq5e6GvVQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
-    <!-- ✅ ELIMINADO: CDN de Tailwind - ahora se usa la instalación local -->
-    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
-    
-    <!-- ✅ Font Awesome para iconos -->
+    <!-- ✅ ÚNICO: Font Awesome -->
     <link 
       rel="stylesheet" 
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
-      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css" 
+      integrity="sha512-9xKTRVabjVeZmc+GUW8GgSmcREDunMM+Dt/GrzchfN8tkwHizc5RP4Ok/MXFFy5rIjJjzhndFScTceq5e6GvVQ==" 
       crossorigin="anonymous" 
       referrerpolicy="no-referrer" 
     />
@@ -35,7 +22,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
-    <!-- ✅ Inter font para mejor tipografía -->
+    <!-- ✅ Inter font -->
     <link 
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" 
       rel="stylesheet"
@@ -43,23 +30,19 @@
     
     <title>Skill Exchange - Intercambio de Habilidades</title>
     
-    <!-- ✅ Meta tags adicionales para SEO -->
+    <!-- ✅ Meta tags para SEO -->
     <meta property="og:title" content="Skill Exchange - Intercambio de Habilidades" />
     <meta property="og:description" content="Conecta con personas increíbles y aprende habilidades nuevas mientras compartes las tuyas" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="%PUBLIC_URL%/logo512.png" />
     
-    <!-- ✅ Meta tags para Twitter -->
+    <!-- ✅ Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Skill Exchange" />
     <meta name="twitter:description" content="Plataforma de intercambio de habilidades" />
     
-    <!-- ✅ Configuración de tema para dispositivos móviles -->
-    <meta name="theme-color" content="#3b82f6" />
-    <meta name="msapplication-TileColor" content="#3b82f6" />
-    
     <style>
-      /* ✅ Loading spinner inicial mientras carga React */
+      /* ✅ Loading spinner inicial */
       .initial-loading {
         position: fixed;
         top: 0;
@@ -97,19 +80,16 @@
         opacity: 0.9;
       }
       
-      /* ✅ Ocultar cuando React cargue */
       .initial-loading.fade-out {
         opacity: 0;
         transition: opacity 0.5s ease-out;
         pointer-events: none;
       }
       
-      /* ✅ Scroll suave */
       html {
         scroll-behavior: smooth;
       }
       
-      /* ✅ Base font */
       body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -126,7 +106,6 @@
       </div>
     </noscript>
     
-    <!-- ✅ Loading inicial -->
     <div id="initial-loading" class="initial-loading">
       <div class="spinner"></div>
       <div class="loading-text">
@@ -137,9 +116,7 @@
     
     <div id="root"></div>
     
-    <!-- ✅ Script para ocultar loading cuando React cargue -->
     <script>
-      // Ocultar loading cuando React monte
       window.addEventListener('load', function() {
         const loading = document.getElementById('initial-loading');
         if (loading) {
@@ -148,11 +125,10 @@
             setTimeout(() => {
               loading.style.display = 'none';
             }, 500);
-          }, 1000); // Mostrar por al menos 1 segundo
+          }, 1000);
         }
       });
       
-      // Fallback: ocultar loading después de 5 segundos
       setTimeout(function() {
         const loading = document.getElementById('initial-loading');
         if (loading && loading.style.display !== 'none') {

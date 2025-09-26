@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { buildAvatarUrl } from '../../api/api';
 
 const EditProfileModal = ({ user, onClose, onProfileUpdated }) => {
   const [formData, setFormData] = useState({
@@ -15,7 +16,9 @@ const EditProfileModal = ({ user, onClose, onProfileUpdated }) => {
   });
 
   const [avatar, setAvatar] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(user.avatar || '');
+  const cacheKey = user?.updatedAt || user?.date || user?._id || '';
+  const initialAvatar = user?.avatar ? buildAvatarUrl(user.avatar, cacheKey) : '';
+  const [avatarPreview, setAvatarPreview] = useState(initialAvatar);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('basic');

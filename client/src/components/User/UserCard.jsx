@@ -1,49 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Avatar from '../Common/Avatar';
 
 const UserCard = ({ user }) => {
-  const { name, email, skills_to_offer = [], skills_to_learn = [], _id, bio, avatar, location, experience } = user;
-
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatar = () => {
-    const avatarUrl = avatar ? getAvatarUrl(avatar) : null;
-    
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${name}`}
-          className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg mx-auto"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg mx-auto">
-        {name.charAt(0).toUpperCase()}
-      </div>
-    );
-  };
+  const { name, email, skills_to_offer = [], skills_to_learn = [], _id, bio, location, experience } = user;
 
   return (
     <div className="card card-hover group p-6 h-full flex flex-col">
-      {/* Avatar y Info Básica */}
+      {/* Avatar + Info Básica */}
       <div className="text-center mb-4">
         <div className="relative mb-4">
-          {renderAvatar()}
-          <div style={{ display: 'none' }} className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-white shadow-lg mx-auto">
-            {name.charAt(0).toUpperCase()}
-          </div>
+          <Avatar 
+            user={user}
+            size="xl"
+            className="mx-auto mb-4"
+          />
           
           {/* Badge de experiencia */}
           {experience && (

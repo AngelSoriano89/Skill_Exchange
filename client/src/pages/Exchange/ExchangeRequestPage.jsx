@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { ENDPOINTS } from '../../api/api';
+import Avatar from '../../components/Common/Avatar';
 
 const ExchangeRequestPage = () => {
   const { userId } = useParams();
@@ -13,6 +15,7 @@ const ExchangeRequestPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [duplicateExchangeId, setDuplicateExchangeId] = useState(null);
   
   const [formData, setFormData] = useState({
     message: '',
@@ -20,24 +23,13 @@ const ExchangeRequestPage = () => {
     skills_to_learn: ''
   });
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    
-    if (userId) {
-      fetchRecipientData();
-    }
-  }, [userId, user, navigate]);
-
-  const fetchRecipientData = async () => {
+  const fetchRecipientData = useCallback(async () => {
     try {
-      const response = await api.get(`/users/${userId}`);
+      const response = await api.get(ENDPOINTS.users.byId(userId));
       setRecipient(response.data);
       
       // Pre-llenar habilidades basadas en los perfiles
-      if (user.skills_to_offer) {
+      if (user?.skills_to_offer) {
         setFormData(prev => ({
           ...prev,
           skills_to_offer: user.skills_to_offer.join(', ')
@@ -57,7 +49,20 @@ const ExchangeRequestPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, user]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    
+    if (userId) {
+      fetchRecipientData();
+    }
+  }, [userId, user, navigate, fetchRecipientData]);
+
+  // fetchRecipientData ahora está memorizada con useCallback
 
   const handleChange = (e) => {
     setFormData({
@@ -69,18 +74,33 @@ const ExchangeRequestPage = () => {
   };
 
   const validateForm = () => {
-    if (!formData.message.trim()) {
-      setError('Por favor escribe un mensaje personalizado');
+    const message = formData.message.trim();
+    if (message.length < 10) {
+      setError('El mensaje debe tener al menos 10 caracteres.');
       return false;
     }
-    if (!formData.skills_to_offer.trim()) {
-      setError('Especifica qué habilidades puedes ofrecer');
+
+    const offerArr = formData.skills_to_offer
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length >= 2)
+      .slice(0, 10);
+
+    const learnArr = formData.skills_to_learn
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length >= 2)
+      .slice(0, 10);
+
+    if (offerArr.length === 0) {
+      setError('Debes especificar al menos una habilidad válida para ofrecer (mínimo 2 caracteres).');
       return false;
     }
-    if (!formData.skills_to_learn.trim()) {
-      setError('Especifica qué habilidades quieres aprender');
+    if (learnArr.length === 0) {
+      setError('Debes especificar al menos una habilidad válida para aprender (mínimo 2 caracteres).');
       return false;
     }
+
     return true;
   };
 
@@ -95,55 +115,73 @@ const ExchangeRequestPage = () => {
     setError('');
 
     try {
+      const skills_to_offer = formData.skills_to_offer
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length >= 2)
+        .slice(0, 10);
+
+      const skills_to_learn = formData.skills_to_learn
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length >= 2)
+        .slice(0, 10);
+
       const requestData = {
         recipientId: recipient._id,
-        skills_to_offer: formData.skills_to_offer.split(',').map(s => s.trim()).filter(s => s),
-        skills_to_learn: formData.skills_to_learn.split(',').map(s => s.trim()).filter(s => s),
+        skills_to_offer,
+        skills_to_learn,
         message: formData.message.trim(),
       };
 
-      await api.post('/exchanges/request', requestData);
+      await api.post(ENDPOINTS.exchanges.request, requestData);
       setSuccess(true);
     } catch (err) {
       console.error('Error sending exchange request:', err);
-      setError(err.response?.data?.msg || 'Error al enviar la solicitud. Intenta de nuevo.');
+      const serverMsg = err.response?.data?.msg;
+      const serverErrors = err.response?.data?.errors;
+      const dupId = err.response?.data?.exchangeId;
+      if (dupId) {
+        setDuplicateExchangeId(dupId);
+      }
+      if (serverErrors && Array.isArray(serverErrors) && serverErrors.length > 0) {
+        const messages = serverErrors.map(e => (typeof e === 'string' ? e : (e.msg || e.message || JSON.stringify(e))));
+        setError(messages.join(' | '));
+      } else if (serverMsg) {
+        setError(serverMsg);
+      } else if (err.response?.status === 400) {
+        setError('Solicitud inválida. Revisa los campos e intenta de nuevo.');
+      } else if (err.response?.status === 401) {
+        setError('No autorizado. Inicia sesión para enviar solicitudes.');
+      } else if (err.response?.status === 404) {
+        setError('Usuario destinatario no encontrado.');
+      } else {
+        setError('Error al enviar la solicitud. Intenta de nuevo.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith('http')) return avatarPath;
-    return `http://localhost:5000${avatarPath}`;
+  const handleGoToExistingExchange = () => {
+    if (!duplicateExchangeId) return;
+    // Ruta asumida para ver/gestionar el intercambio existente
+    navigate(`/exchange/contact/${duplicateExchangeId}`);
   };
 
-  const renderAvatarWithFallback = (userData, sizeClasses = 'w-20 h-20') => {
-    if (!userData) return null;
-    
-    const avatarUrl = userData.avatar ? getAvatarUrl(userData.avatar) : null;
-    
-    return (
-      <div className="relative">
-        {avatarUrl && (
-          <img
-            src={avatarUrl}
-            alt={`Avatar de ${userData.name}`}
-            className={`${sizeClasses} rounded-full object-cover border-4 border-white shadow-lg`}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const fallback = e.target.parentNode.querySelector('.fallback-avatar');
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        )}
-        <div 
-          className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-xl font-bold border-4 border-white shadow-lg ${avatarUrl ? 'hidden' : 'flex'}`}
-        >
-          {userData.name?.charAt(0).toUpperCase() || 'U'}
-        </div>
-      </div>
-    );
+  const handleCancelPending = async () => {
+    if (!duplicateExchangeId) return;
+    try {
+      setSubmitting(true);
+      await api.delete(ENDPOINTS.exchanges.cancel(duplicateExchangeId));
+      setDuplicateExchangeId(null);
+      setError('Solicitud pendiente cancelada. Ahora puedes enviar una nueva.');
+    } catch (e) {
+      console.error('Error cancelando solicitud pendiente:', e);
+      setError(e.response?.data?.msg || 'No se pudo cancelar la solicitud pendiente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -250,7 +288,10 @@ const ExchangeRequestPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Información del destinatario */}
               <div className="text-center">
-                {renderAvatarWithFallback(recipient)}
+                <Avatar 
+                  user={recipient} 
+                  size="2xl"
+                />
                 <h2 className="text-2xl font-bold text-gray-900 mt-4">{recipient.name}</h2>
                 <p className="text-gray-600">{recipient.email}</p>
                 
@@ -273,8 +314,31 @@ const ExchangeRequestPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                      <i className="fas fa-exclamation-circle mr-2"></i>
-                      {error}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <i className="fas fa-exclamation-circle mr-2"></i>
+                          {error}
+                        </div>
+                        {duplicateExchangeId && (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleGoToExistingExchange}
+                              className="btn-outline-secondary text-xs"
+                            >
+                              Ver solicitud
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelPending}
+                              className="btn-outline-danger text-xs"
+                              disabled={submitting}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
