@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { validateRegister, validateLogin, handleValidationErrors } = require('../middleware/validation');
-const { register, login, getLoggedInUser } = require('../controllers/authController');
+const { register, login, getLoggedInUser, logout, refreshToken } = require('../controllers/authController');
 
 /**
  * @swagger
@@ -137,5 +137,11 @@ router.post('/login', validateLogin, handleValidationErrors, login);
  *         description: Error del servidor
  */
 router.get('/me', authMiddleware, getLoggedInUser);
+
+// Cerrar sesión (informativo para el cliente)
+router.post('/logout', authMiddleware, logout);
+
+// Refrescar token
+router.get('/refresh', authMiddleware, refreshToken);
 
 module.exports = router;

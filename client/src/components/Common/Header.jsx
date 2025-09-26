@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import Avatar from './Avatar';
 
 const Header = () => {
   const { user, logout } = useContext(AuthContext);
@@ -12,40 +13,6 @@ const Header = () => {
     navigate('/login');
   };
 
-  const getAvatarUrl = (avatarPath) => {
-    if (!avatarPath) return null;
-    // Si la ruta ya incluye http, devolverla tal como está
-    if (avatarPath.startsWith('http')) return avatarPath;
-    // Si no, agregar la URL base del servidor
-    return `http://localhost:5000${avatarPath}`;
-  };
-
-  const renderAvatar = (size = 'w-8 h-8') => {
-    const avatarUrl = user?.avatar ? getAvatarUrl(user.avatar) : null;
-    
-    if (avatarUrl) {
-      return (
-        <img
-          src={avatarUrl}
-          alt={`Avatar de ${user?.name || 'Usuario'}`}
-          className={`${size} rounded-full object-cover border-2 border-white shadow-md`}
-          onError={(e) => {
-            // Si la imagen falla, ocultar y mostrar el avatar con inicial
-            e.target.style.display = 'none';
-            const fallback = e.target.nextElementSibling;
-            if (fallback) fallback.style.display = 'flex';
-          }}
-        />
-      );
-    }
-    
-    return (
-      <div className={`${size} bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white font-bold shadow-md`}>
-        {user?.name?.charAt(0).toUpperCase() || 'U'}
-      </div>
-    );
-  };
-
   return (
     <header className="bg-white shadow-lg border-b border-gray-100 sticky top-0 z-50">
       <nav className="container mx-auto px-4 py-4">
@@ -53,9 +20,9 @@ const Header = () => {
           {/* Logo */}
           <Link 
             to={user ? "/dashboard" : "/"} 
-            className="text-2xl font-bold gradient-text hover:opacity-80 transition-opacity"
+            className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
           >
-            <i className="fas fa-exchange-alt mr-2"></i>
+            <i className="fas fa-exchange-alt mr-2 text-blue-600"></i>
             Skill Exchange
           </Link>
 
@@ -65,21 +32,21 @@ const Header = () => {
               <>
                 <Link 
                   to="/dashboard" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium transition-colors"
                 >
                   <i className="fas fa-tachometer-alt mr-2"></i>
                   Dashboard
                 </Link>
                 <Link 
                   to="/search" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium transition-colors"
                 >
                   <i className="fas fa-search mr-2"></i>
                   Buscar
                 </Link>
                 <Link 
                   to="/profile" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium transition-colors"
                 >
                   <i className="fas fa-user mr-2"></i>
                   Mi Perfil
@@ -96,11 +63,15 @@ const Header = () => {
                     </p>
                   </div>
                   
-                  {renderAvatar()}
+                  <Avatar 
+                    user={user} 
+                    size="sm"
+                    onClick={() => navigate('/profile')}
+                  />
                   
                   <button 
                     onClick={handleLogout}
-                    className="btn-primary text-sm px-4 py-2"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     <i className="fas fa-sign-out-alt mr-1"></i>
                     Salir
@@ -111,14 +82,14 @@ const Header = () => {
               <div className="flex items-center space-x-4">
                 <Link 
                   to="/register" 
-                  className="text-gray-600 hover:text-primary-600 font-medium transition-colors"
+                  className="text-gray-600 hover:text-blue-600 font-medium transition-colors"
                 >
                   <i className="fas fa-user-plus mr-1"></i>
                   Registrarse
                 </Link>
                 <Link 
                   to="/login" 
-                  className="btn-primary"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
                 >
                   <i className="fas fa-sign-in-alt mr-1"></i>
                   Iniciar Sesión
@@ -131,7 +102,7 @@ const Header = () => {
           <div className="md:hidden">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-600 hover:text-primary-600 focus:outline-none focus:text-primary-600"
+              className="text-gray-600 hover:text-blue-600 focus:outline-none focus:text-blue-600"
             >
               <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
             </button>
@@ -144,11 +115,12 @@ const Header = () => {
             {user ? (
               <div className="space-y-4 pt-4">
                 <div className="flex items-center space-x-3 mb-4">
-                  {renderAvatar()}
+                  <Avatar 
+                    user={user} 
+                    size="md"
+                  />
                   <div>
-                    <p className="font-medium text-gray-900">
-                      {user.name}
-                    </p>
+                    <p className="font-medium text-gray-900">{user.name}</p>
                     <p className="text-sm text-gray-500">
                       {user.skills_to_offer?.length || 0} habilidades
                     </p>
@@ -157,7 +129,7 @@ const Header = () => {
                 
                 <Link 
                   to="/dashboard" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium py-2 transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium py-2 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <i className="fas fa-tachometer-alt mr-3 w-5"></i>
@@ -165,7 +137,7 @@ const Header = () => {
                 </Link>
                 <Link 
                   to="/search" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium py-2 transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium py-2 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <i className="fas fa-search mr-3 w-5"></i>
@@ -173,7 +145,7 @@ const Header = () => {
                 </Link>
                 <Link 
                   to="/profile" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium py-2 transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium py-2 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <i className="fas fa-user mr-3 w-5"></i>
@@ -184,7 +156,7 @@ const Header = () => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="flex items-center text-red-600 hover:text-red-700 font-medium py-2 transition-colors"
+                  className="flex items-center text-red-600 hover:text-red-700 font-medium py-2 transition-colors w-full text-left"
                 >
                   <i className="fas fa-sign-out-alt mr-3 w-5"></i>
                   Cerrar Sesión
@@ -194,7 +166,7 @@ const Header = () => {
               <div className="space-y-4 pt-4">
                 <Link 
                   to="/register" 
-                  className="flex items-center text-gray-600 hover:text-primary-600 font-medium py-2 transition-colors"
+                  className="flex items-center text-gray-600 hover:text-blue-600 font-medium py-2 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <i className="fas fa-user-plus mr-3 w-5"></i>
@@ -202,7 +174,7 @@ const Header = () => {
                 </Link>
                 <Link 
                   to="/login" 
-                  className="flex items-center text-primary-600 hover:text-primary-700 font-medium py-2 transition-colors"
+                  className="flex items-center text-blue-600 hover:text-blue-700 font-medium py-2 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <i className="fas fa-sign-in-alt mr-3 w-5"></i>

@@ -34,30 +34,37 @@ if (process.env.NODE_ENV === 'development') {
   };
 }
 
-// ✅ AGREGADO: Manejo de errores global para React
-window.addEventListener('error', (event) => {
-  if (event.error && event.error.message && event.error.message.includes('ResizeObserver')) {
+// ✅ AGREGADO: Manejo de errores global para React (en captura y deteniendo propagación)
+const resizeObserverGuard = (event) => {
+  const message = event?.error?.message || event?.message || event?.reason?.message;
+  if (message && message.includes('ResizeObserver')) {
     event.preventDefault();
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation();
     return false;
   }
-});
+};
 
-window.addEventListener('unhandledrejection', (event) => {
-  if (event.reason && event.reason.message && event.reason.message.includes('ResizeObserver')) {
-    event.preventDefault();
-    return false;
-  }
-});
+window.addEventListener('error', resizeObserverGuard, true); // capture
+window.addEventListener('unhandledrejection', resizeObserverGuard, true); // capture
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-root.render(
-  <React.StrictMode>
+if (process.env.NODE_ENV === 'production') {
+  root.render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+} else {
+  // En desarrollo, evitamos StrictMode para reducir dobles renders y ruido de ResizeObserver
+  root.render(
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>
-);
+  );
+}
 
 // ✅ AGREGADO: Ocultar loading inicial cuando React esté listo
 const hideInitialLoading = () => {

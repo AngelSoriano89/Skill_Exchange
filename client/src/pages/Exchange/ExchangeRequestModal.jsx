@@ -1,7 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../../api/api';
+import api from '../../api/api.jsx';
+import { buildAvatarUrl } from '../../api/api';
 
 const ExchangeRequestModal = ({ onClose, recipient }) => {
   const { user } = useContext(AuthContext);
@@ -77,6 +78,35 @@ const ExchangeRequestModal = ({ onClose, recipient }) => {
       onClose();
     }
   };
+
+const renderAvatarWithFallback = (userData, sizeClasses = 'w-10 h-10') => {
+  if (!userData) return null;
+  
+  const cacheKey = userData?.updatedAt || userData?.date || userData?._id || '';
+  const avatarUrl = userData.avatar ? buildAvatarUrl(userData.avatar, cacheKey) : null;
+  
+  return (
+    <div className="relative">
+      {avatarUrl && (
+        <img
+          src={avatarUrl}
+          alt={`Avatar de ${userData.name}`}
+          className={`${sizeClasses} rounded-full object-cover border-2 border-white shadow-md`}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const fallback = e.target.parentNode.querySelector('.fallback-avatar');
+            if (fallback) fallback.style.display = 'flex';
+          }}
+        />
+      )}
+      <div 
+        className={`fallback-avatar ${sizeClasses} bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ${avatarUrl ? 'hidden' : 'flex'}`}
+      >
+        {userData.name?.charAt(0).toUpperCase() || 'U'}
+      </div>
+    </div>
+  );
+};
 
   return (
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1050 }}>

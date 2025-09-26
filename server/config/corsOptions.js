@@ -46,7 +46,9 @@ const corsOptions = {
     }
     
     // ✅ Log para debug (solo en desarrollo)
-    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`CORS check for origin: ${origin}`);
+    }
 
     // Verificar si el origin está en la lista permitida
     if (allowedOrigins.includes(origin)) {
@@ -67,7 +69,6 @@ const corsOptions = {
   
   // ✅ Código de éxito para requests OPTIONS
   optionsSuccessStatus: 200,
-  credentials: true,
 };
 
 module.exports = corsOptions;

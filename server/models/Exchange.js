@@ -44,8 +44,16 @@ const ExchangeSchema = new mongoose.Schema({
   },
   skill: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Skill', // ✅ CORREGIDO: Capitalizado para consistencia
+    ref: 'Skill',
     default: null,
+    // Asegurar que el modelo Skill esté registrado
+    get: function() {
+      if (this.populated('skill')) return this.populated('skill');
+      return this.get('skill');
+    },
+    set: function(val) {
+      this.set('skill', val);
+    }
   },
   contactInfo: {
     isUnlocked: {
@@ -263,37 +271,63 @@ ExchangeSchema.methods.canUserModify = function(userId, action) {
 
 // ✅ AGREGADO: Método estático para obtener estadísticas
 ExchangeSchema.statics.getStats = async function(userId) {
-  const stats = await this.aggregate([
-    {
-      $match: {
-        $or: [
-          { sender: mongoose.Types.ObjectId(userId) },
-          { recipient: mongoose.Types.ObjectId(userId) }
-        ]
-      }
-    },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 }
-      }
+  try {
+    // ✅ VALIDAR: Asegurar que el userId sea un ObjectId válido
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error('ID de usuario no válido');
     }
-  ]);
-  
-  const result = {
-    pending: 0,
-    accepted: 0,
-    rejected: 0,
-    completed: 0,
-    total: 0
-  };
-  
-  stats.forEach(stat => {
-    result[stat._id] = stat.count;
-    result.total += stat.count;
-  });
-  
-  return result;
+
+    const stats = await this.aggregate([
+      {
+        $match: {
+          $or: [
+            { sender: mongoose.Types.ObjectId(userId) },
+            { recipient: mongoose.Types.ObjectId(userId) }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // ✅ INICIALIZAR: Valores por defecto para todos los estados posibles
+    const result = {
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+      completed: 0,
+      cancelled: 0,
+      expired: 0,
+      total: 0
+    };
+    
+    // ✅ SUMAR: Contar por estado
+    stats.forEach(stat => {
+      if (stat._id && result.hasOwnProperty(stat._id)) {
+        result[stat._id] = stat.count;
+        result.total += stat.count;
+      }
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error en getStats:', error);
+    // ✅ RECUPERACIÓN: Devolver valores por defecto en caso de error
+    return {
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+      completed: 0,
+      cancelled: 0,
+      expired: 0,
+      total: 0,
+      error: 'Error al calcular estadísticas'
+    };
+  }
 };
 
 // ✅ Virtual para verificar si está expirado (después de 30 días pendiente)
@@ -305,8 +339,18 @@ ExchangeSchema.virtual('isExpired').get(function() {
 
 // ✅ Virtual para duración del intercambio
 ExchangeSchema.virtual('duration').get(function() {
-  if (!this.exchangeDetails.startDate || !this.exchangeDetails.endDate) return null;
-  const diffTime = Math.abs(this.exchangeDetails.endDate - this.exchangeDetails.startDate);
+  if (!this.exchangeDetails?.startDate || !this.exchangeDetails?.endDate) return null;
+  
+  const start = new Date(this.exchangeDetails.startDate);
+  const end = new Date(this.exchangeDetails.endDate);
+  
+  // Validar fechas
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    console.error('Invalid dates in exchange details:', this.exchangeDetails);
+    return null;
+  }
+  
+  const diffTime = Math.abs(end - start);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return `${diffDays} día${diffDays !== 1 ? 's' : ''}`;
 });

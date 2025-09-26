@@ -1,112 +1,151 @@
-// ========================================
-// client/src/components/Common/Avatar.jsx
-// Componente opcional para manejar avatares con fallbacks
-// ========================================
+import React, { useState, useEffect } from 'react';
+import { buildAvatarUrl } from '../../api/api';
 
-// import React, { useState, useEffect } from 'react';
+const Avatar = ({ 
+  user, 
+  size = 'md', 
+  className = '', 
+  fallbackBg = 'from-blue-500 to-purple-600',
+  onClick = null,
+  showBorder = true,
+  showShadow = true 
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
 
-// const Avatar = ({ 
-//   user, 
-//   size = 'w-10 h-10', 
-//   className = '', 
-//   fallbackBg = 'from-primary-500 to-primary-700' 
-// }) => {
-//   const [imageError, setImageError] = useState(false);
-//   const [imageLoading, setImageLoading] = useState(true);
+  // Mapeo de tamaños
+  const sizeClasses = {
+    xs: 'w-6 h-6 text-xs',
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-12 h-12 text-base',
+    lg: 'w-16 h-16 text-lg',
+    xl: 'w-20 h-20 text-xl',
+    '2xl': 'w-32 h-32 text-3xl'
+  };
 
-//   const getAvatarUrl = (avatarPath) => {
-//     if (!avatarPath) return null;
-//     if (avatarPath.startsWith('http')) return avatarPath;
-    
-//     // ✅ USAR: Ruta directa al servidor backend
-//     const baseUrl = process.env.NODE_ENV === 'production' 
-//       ? window.location.origin 
-//       : 'http://localhost:5000';
-    
-//     return `${baseUrl}${avatarPath}`;
-//   };
+  const sizeClass = sizeClasses[size] || sizeClasses.md;
+  
+  const cacheKey = user?.updatedAt || user?.date || user?._id || '';
+  const avatarUrl = user?.avatar ? buildAvatarUrl(user.avatar, cacheKey) : null;
+  const userName = user?.name || 'Usuario';
+  const userInitial = userName.charAt(0).toUpperCase();
 
-//   const avatarUrl = user?.avatar ? getAvatarUrl(user.avatar) : null;
-//   const userName = user?.name || 'Usuario';
-//   const userInitial = userName.charAt(0).toUpperCase();
+  // Reset error state cuando cambia el usuario
+  useEffect(() => {
+    if (avatarUrl) {
+      setImageError(false);
+      setImageLoading(true);
+    }
+  }, [avatarUrl, user?.id]);
 
-//   // Reset error state cuando cambia el usuario
-//   useEffect(() => {
-//     if (avatarUrl) {
-//       setImageError(false);
-//       setImageLoading(true);
-//     }
-//   }, [avatarUrl]);
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
 
-//   const handleImageLoad = () => {
-//     setImageLoading(false);
-//   };
+  const handleImageError = () => {
+    console.warn(`Error cargando avatar: ${avatarUrl}`);
+    setImageError(true);
+    setImageLoading(false);
+  };
 
-//   const handleImageError = () => {
-//     console.warn(`Error cargando avatar: ${avatarUrl}`);
-//     setImageError(true);
-//     setImageLoading(false);
-//   };
+  const baseClasses = `
+    ${sizeClass} 
+    rounded-full 
+    flex 
+    items-center 
+    justify-center 
+    font-bold 
+    transition-all 
+    duration-200
+    ${showBorder ? 'border-2 border-white' : ''}
+    ${showShadow ? 'shadow-md' : ''}
+    ${onClick ? 'cursor-pointer hover:scale-105' : ''}
+    ${className}
+  `.trim().replace(/\s+/g, ' ');
 
-//   // Si no hay avatar URL o hay error, mostrar fallback
-//   if (!avatarUrl || imageError) {
-//     return (
-//       <div className={`${size} bg-gradient-to-br ${fallbackBg} rounded-full flex items-center justify-center text-white font-bold shadow-md ${className}`}>
-//         {userInitial}
-//       </div>
-//     );
-//   }
+  // Si no hay avatar URL o hay error, mostrar fallback
+  if (!avatarUrl || imageError) {
+    return (
+      <div 
+        className={`${baseClasses} bg-gradient-to-br ${fallbackBg} text-white`}
+        onClick={onClick}
+        title={userName}
+      >
+        {userInitial}
+      </div>
+    );
+  }
 
-//   return (
-//     <div className={`${size} relative ${className}`}>
-//       {/* Mostrar skeleton mientras carga */}
-//       {imageLoading && (
-//         <div className={`${size} bg-gray-200 animate-pulse rounded-full absolute inset-0`}></div>
-//       )}
+  return (
+    <div className={`${baseClasses} relative overflow-hidden`} onClick={onClick}>
+      {/* Mostrar skeleton mientras carga */}
+      {imageLoading && (
+        <div className={`${sizeClass} bg-gray-200 animate-pulse rounded-full absolute inset-0`} />
+      )}
       
-//       {/* Imagen del avatar */}
-//       <img
-//         src={avatarUrl}
-//         alt={`Avatar de ${userName}`}
-//         className={`${size} rounded-full object-cover border-2 border-white shadow-md ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}
-//         onLoad={handleImageLoad}
-//         onError={handleImageError}
-//         crossOrigin="anonymous" // ✅ IMPORTANTE: Para CORS
-//       />
-//     </div>
-//   );
-// };
+      {/* Imagen del avatar */}
+      <img
+        src={avatarUrl}
+        alt={`Avatar de ${userName}`}
+        className={`
+          ${sizeClass} 
+          rounded-full 
+          object-cover 
+          ${imageLoading ? 'opacity-0' : 'opacity-100'} 
+          transition-opacity 
+          duration-200
+        `}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
+        crossOrigin="anonymous"
+      />
+    </div>
+  );
+};
 
-// export default Avatar;
+// Componente AvatarGroup para mostrar múltiples avatares
+export const AvatarGroup = ({ users = [], maxVisible = 3, size = 'md', className = '' }) => {
+  const visibleUsers = users.slice(0, maxVisible);
+  const remainingCount = users.length - maxVisible;
+  
+  const sizeClasses = {
+    xs: 'w-6 h-6 text-xs',
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-12 h-12 text-base',
+    lg: 'w-16 h-16 text-lg'
+  };
+  
+  const sizeClass = sizeClasses[size] || sizeClasses.md;
 
-// ========================================
-// USO DEL COMPONENTE:
-// ========================================
+  return (
+    <div className={`flex -space-x-2 ${className}`}>
+      {visibleUsers.map((user, index) => (
+        <Avatar
+          key={user.id || index}
+          user={user}
+          size={size}
+          className="ring-2 ring-white"
+        />
+      ))}
+      
+      {remainingCount > 0 && (
+        <div className={`
+          ${sizeClass} 
+          bg-gray-100 
+          text-gray-600 
+          rounded-full 
+          flex 
+          items-center 
+          justify-center 
+          font-medium 
+          ring-2 
+          ring-white
+        `}>
+          +{remainingCount}
+        </div>
+      )}
+    </div>
+  );
+};
 
-// En lugar de:
-// renderAvatarWithFallback(user)
-
-// Usar:
-// <Avatar user={user} size="w-20 h-20" />
-
-// ========================================
-// EJEMPLO EN UserCard.jsx:
-// ========================================
-
-// import Avatar from '../Common/Avatar';
-
-// const UserCard = ({ user }) => {
-//   return (
-//     <div className="card">
-//       <div className="text-center mb-4">
-//         <Avatar 
-//           user={user} 
-//           size="w-20 h-20" 
-//           className="mx-auto mb-4"
-//         />
-//         <h3 className="text-lg font-bold">{user.name}</h3>
-//         {/* resto del componente */}
-//       </div>
-//     </div>
-//   );
-// };
+export default Avatar;
