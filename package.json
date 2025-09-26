@@ -1,18 +1,22 @@
 {
-  "name": "inter-habil",
+  "name": "Skill_Exchange",
   "version": "1.0.0",
   "private": true,
-  "description": "Skill Exchange Platform - Full Stack Application",
+  "description": "Skill_Exchange Platform - Full Stack Application",
   "scripts": {
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "build": "cd client && npm run build",
     "start": "cd server && node server.js",
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\""
   },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   },
-  "keywords": ["skill-exchange", "education", "learning", "fullstack"],
+  "keywords": ["Skill_Exchange", "education", "learning", "fullstack"],
   "author": "Grupo-A",
   "license": "ISC"
 }
