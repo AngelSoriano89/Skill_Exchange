@@ -8,12 +8,18 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.4.3",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.19",
+    "autoprefixer": "^10.4.21",
     "axios": "^1.11.0",
+    "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.2",
     "react-scripts": "5.0.1",
     "react-select": "^5.10.2",
+    "tailwindcss": "^3.4.17",
     "web-vitals": "^2.1.4"
   },
   "keywords": [
@@ -27,7 +33,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AngelSoriano89/Skill_Exchange.git"
+    "url": "https://github.com/AngelSoriano89/inter-habil.git"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -60,14 +66,8 @@
     ]
   },
   "devDependencies": {
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.19",
-    "autoprefixer": "^10.4.21",
     "eslint": "^8.48.0",
     "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "eslint-plugin-react-hooks": "^4.6.0"
   }
 }
