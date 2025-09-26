@@ -1,15 +1,17 @@
 services:
   - type: web
-    name: inter-habil
+    name: Skill_Exchange
     env: node
     buildCommand: |
       npm install
-      cd client && npm install && npm run build
-      cd ../server && npm install
+      (cd client && npm install && npm run build)
+      (cd server && npm install --production)
     startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 18.16.0
       - key: MONGODB_URI
         fromDatabase:
           name: mongodb
@@ -19,8 +21,8 @@ services:
       - key: API_PREFIX
         value: /api
       - key: FRONTEND_URL
-        value: https://tu-app.onrender.com
+        value: https://Skill_Exchange.onrender.com
       - key: RATE_LIMIT_WINDOW_MS
-        value: '900000'  # 15 minutos en milisegundos
+        value: '900000'
       - key: RATE_LIMIT_MAX_REQUESTS
         value: '100'
