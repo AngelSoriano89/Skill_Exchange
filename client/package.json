@@ -27,18 +27,18 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AngelSoriano89/inter-habil.git"
+    "url": "https://github.com/AngelSoriano89/Skill_Exchange.git"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && npm run build-tailwind",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "analyze": "npm run build && npx serve -s build",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "build-tailwind": "tailwindcss -i ./src/input.css -o ./dist/output.css",
+    "build-tailwind": "tailwindcss -i ./src/input.css -o ./build/static/css/tailwind.css",
     "watch-tailwind": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch"
   },
   "eslintConfig": {
