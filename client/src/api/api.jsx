@@ -1,11 +1,27 @@
 import axios from 'axios';
-import { API_CONFIG } from './api';
+
+// Configuración inicial de la API
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    const envUrl = process.env.REACT_APP_API_URL.trim();
+    return envUrl.startsWith('http') ? envUrl : `${window.location.origin}${envUrl}`;
+  }
+  
+  if (process.env.NODE_ENV === 'production') {
+    return window.location.origin + (process.env.REACT_APP_API_PREFIX || '/api');
+  }
+  
+  // En desarrollo, asumir que el servidor corre en localhost:5000
+  return 'http://localhost:5000/api';
+};
 
 const api = axios.create({
-  baseURL: API_CONFIG.baseURL,
-  headers: API_CONFIG.headers,
+  baseURL: getApiBaseUrl(),
+  headers: {
+    'Content-Type': 'application/json',
+  },
   withCredentials: true,
-  timeout: API_CONFIG.timeout,
+  timeout: 10000,
 });
 
 // Interceptor para requests
