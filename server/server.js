@@ -72,10 +72,38 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 
-// ✅ Routes
+// ✅ Routes API
 app.use(`${API_PREFIX}/auth`, require('./routes/authRoutes'));
 app.use(`${API_PREFIX}/users`, require('./routes/userRoutes'));
 app.use(`${API_PREFIX}/exchanges`, require('./routes/exchangeRoutes'));
+
+// ✅ NUEVO: Servir archivos estáticos de React en producción
+if (process.env.NODE_ENV === 'production') {
+  // Servir archivos estáticos del build de React
+  app.use(express.static(path.join(__dirname, '../client/build')));
+  
+  // Catch all handler para React Router - DEBE ir después de las rutas API
+  app.get('*', (req, res) => {
+    // Si es una ruta API no encontrada, devolver 404
+    if (req.path.startsWith(API_PREFIX)) {
+      return res.status(404).json({ 
+        msg: `Ruta ${req.originalUrl} no encontrada` 
+      });
+    }
+    
+    // Para cualquier otra ruta, servir index.html de React
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+  });
+} else {
+  // En desarrollo, mostrar mensaje para rutas no API
+  app.get('/', (req, res) => {
+    res.json({ 
+      message: 'Skill Exchange API funcionando en desarrollo',
+      apiPrefix: API_PREFIX,
+      healthCheck: `${API_PREFIX}/health`
+    });
+  });
+}
 
 // ✅ Error handling middleware
 app.use((err, req, res, next) => {
@@ -111,10 +139,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ✅ 404 handler
-app.use('*', (req, res) => {
+// ✅ 404 handler solo para rutas API no encontradas (ya no necesario con el catch-all de arriba)
+app.use(`${API_PREFIX}/*`, (req, res) => {
   res.status(404).json({ 
-    msg: `Ruta ${req.originalUrl} no encontrada` 
+    msg: `Ruta API ${req.originalUrl} no encontrada` 
   });
 });
 
